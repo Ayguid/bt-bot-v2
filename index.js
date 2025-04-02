@@ -15,7 +15,7 @@ function startBot() {
     }
 
     console.log('🚀 Starting bot process...');
-    currentBot = spawn('node', ['./bot/TradingBot.js'], {
+    currentBot = spawn('node', ['./bot/Bot.js'], {
         stdio: ['inherit', 'pipe', 'pipe'],
         env: {
             ...process.env,

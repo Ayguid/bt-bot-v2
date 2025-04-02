@@ -14,6 +14,8 @@ const config = {
     shouldResynch: false,
     timeCheckInterval: 60000,
     maxTimeDifferenceMs: 1000,
+    visualizationEnabled: true,  // Set to false to disable
+    visualizationPort: 3000      // Change port if needed
 };
 
 module.exports = config;

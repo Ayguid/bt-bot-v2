@@ -11,12 +11,11 @@ const RateLimitedQueue = require('../classes/RateLimitedQueue');
 const TablePrinter = require('./TablePrinter');
 const TelegramBotHandler = require('./TelegramBotHandler');
 const PairManager = require('./PairManager');
+//const OrderManager = require('./OrderManager');
 const { plusPercent, minusPercent, calculateProfit, timePassed, wait } = require('../utils/helpers');
 const config = require('../config'); // Configuration file
 //server visualize
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
+const VisualizationServer = require('./VisualizationServer');
 //
 const TimeManager = require('./TimeManager');
 //
@@ -42,11 +41,10 @@ class TradingBot {
         this.exchangeInfo = {};
         this.pairManager = new PairManager(path.join(__dirname, '../pairs.json'));// Initialize the PairManager with the path to the pairs file
         this.telegramBotHandler = new TelegramBotHandler(this.config, this.executeCommand.bind(this));// Initialize the Telegram bot handler with a callback to handle commands
-        this.setupVisualizationServer(); //init server for display
         this.timeManager = new TimeManager(this.config, this.makeQueuedReq.bind(this)); //// Initialize TimeManager Pass the queued request method
-        this.timeManager.startTimeCheck();// Start time checks
+        this.initialized = false;
     }
-
+    
     // Initialization method
     async init() {
         try {
@@ -54,29 +52,23 @@ class TradingBot {
             this.pairManager.loadPairsFromFile(); // Load pairs 
             this.telegramBotHandler.initialize();
             // Fetch exchange info only once during initialization
-            await this.fetchExchangeInfo();
-            console.log('TradingBot initialized successfully');
+            console.log('Fetching exchange information');
+            this.exchangeInfo = await this.fetchExchangeInfo();
+            console.log('Exchange information loaded');
+            //this.orderManager = new OrderManager(this.exchangeInfo, this.makeQueuedReq.bind(this));
+            this.timeManager.startTimeCheck();// Start time checks
+            if (this.config.visualizationEnabled) {
+                this.visualizationServer = new VisualizationServer(this.config.visualizationPort);
+                this.visualizationServer.start();
+            }
+            this.initialized = true;  
+            console.log('\x1b[42m%s\x1b[0m', 'TradingBot initialized successfully');
         } catch (error) {
             console.error('Error initializing bot:', error);
             process.exit(1); // Exit if initialization fails
         }
     }
-    setupVisualizationServer() {
-        this.app = express();
-        this.server = http.createServer(this.app);
-        this.io = socketIo(this.server);
-        // Serve static files
-        this.app.use(express.static(path.join(__dirname, '../../public')));
-        // Socket.io connection handler
-        this.io.on('connection', (socket) => {
-          console.log('New client connected');
-          socket.emit('initial-data', this.botDataLogger);
-        });
-        
-        this.server.listen(3000, () => {
-          console.log('Visualization server running on http://localhost:3000');
-        });
-    }
+
     async executeCommand(command, args) {
         const commands = {
             start: () => this.startBot(),
@@ -128,11 +120,9 @@ class TradingBot {
 
     getVolatilityAssessment(candles, period = 20) {
         if (!candles || candles.length < period) return 0;
-        
         const priceChanges = candles.slice(-period).map((c, i, arr) => 
             i > 0 ? Math.abs(c[4] - arr[i-1][4]) / arr[i-1][4] : 0
         );
-        
         const atr = priceChanges.reduce((sum, change) => sum + change, 0) / priceChanges.length;
         return parseFloat((atr * 100).toFixed(2)); // Return as percentage
     }
@@ -195,9 +185,7 @@ class TradingBot {
 
     // New method to fetch and store exchangeInfo only once
     async fetchExchangeInfo() {
-        console.log('Fetching exchange information');
-        this.exchangeInfo = await this.makeQueuedReq(exchangeInfo);
-        console.log('Exchange information loaded');
+        return await this.makeQueuedReq(exchangeInfo);
     }
     
     async trade(pair, currentPrice, orders, analysis) {
@@ -292,17 +280,11 @@ class TradingBot {
                 currentPrice,
                 analysis
             );
-            // console.log(`📉 Current Price: ${currentPrice} | Stop: ${dynamicStop.price}`);
-            // const currentProfit = calculateProfit(currentPrice, previousOrder.price);
-            // console.log(`Profit is: ${currentProfit} %`);
             if (currentPrice <= dynamicStop.price) {
                 console.log(`❗ Stop Loss Triggered at ${dynamicStop.percentage}%`);
                 await this.cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice, true);
             } else if (sellIsApproved) {
                 console.log('Conditions still favorable for selling. Keeping the order open.');
-            } else if (currentProfit <= pair.okLoss) {
-                console.log(`Selling at current price, too much loss.`);
-                await this.cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice, true);
             } else {
                 console.log('Conditions no longer favorable for selling. Consider cancelling remaining order.');
             }
@@ -321,12 +303,12 @@ class TradingBot {
         );
 
         // maybe add in partially filled
-        const minHoldHours = 1; //in hours, Minimum time to hold before considering stops
-        const holdTimeHours = timePassed(new Date(lastOrder.updateTime)) / 3600;
-        if (holdTimeHours < minHoldHours) {
-            console.log(`Holding position (${holdTimeHours.toFixed(1)}h/${minHoldHours}h minimum)`);
-            return;
-        }
+        // const minHoldHours = 1; //in hours, Minimum time to hold before considering stops
+        // const holdTimeHours = timePassed(new Date(lastOrder.updateTime)) / 3600;
+        // if (holdTimeHours < minHoldHours) {
+        //     console.log(`Holding position (${holdTimeHours.toFixed(1)}h/${minHoldHours}h minimum)`);
+        //     return;
+        // }
         
         if (lastOrder.side == TradingBot.SELL) {
             const dynamicStop = this.getDynamicStopLoss(
@@ -360,7 +342,19 @@ class TradingBot {
             console.log('Current conditions not favorable for placing a new order');
         }
     }
-
+    // orderPrePrecision(pair){
+    //     const filters = this.exchangeInfo.symbols.find(symbol => symbol.symbol == pair.joinedPair).filters;
+    //     const getDecimals = (filterValue) => {
+    //         //Remove trailing zeros and decimal point if it's only followed by zeros
+    //         const trimmedValue = parseFloat(filterValue).toString();
+    //         const parts = trimmedValue.split('.');
+    //         return parts[1] ? parts[1].length : 0;
+    //     }
+    //     return {
+    //         priceDecimals: getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize),
+    //         qtyDecimals: getDecimals(filters.find(f => f.filterType === 'LOT_SIZE').stepSize),
+    //     }
+    // }
     async placeBuyOrder(pair, currentPrice) {
         console.log(`Placing buy order for ${pair.key}`);
         const balances = await this.getBalances(pair.key);
@@ -530,8 +524,8 @@ class TradingBot {
             }
         }
         // Emit updated data
-        if (this.io) {
-            this.io.emit('data-update', this.botDataLogger);
+        if (this.visualizationServer) {
+            this.visualizationServer.emitData(this.botDataLogger);
         }
         return results;
     }

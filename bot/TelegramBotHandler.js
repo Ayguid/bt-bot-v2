@@ -11,7 +11,7 @@ class TelegramBotHandler {
 
     initialize() {
         if (!this.config.telegramBotEnabled) {
-            console.log('Telegram bot is disabled via configuration.');
+            console.log('\x1b[33m%s\x1b[0m', 'Telegram bot is disabled via configuration.');
             return; // Do not initialize the bot if disabled
         }
         const token = process.env.TELEGRAM_BOT_TOKEN;
