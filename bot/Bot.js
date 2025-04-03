@@ -228,17 +228,17 @@ class TradingBot {
     }
 
     async handleFilledOrder(pair, lastOrder, currentPrice, buyIsApproved, sellIsApproved, analysis) {
-        if (lastOrder.side === TradingBot.BUY) {
-            const dynamicStop = this.getDynamicStopLoss(
-                pair, 
-                lastOrder.price, 
-                currentPrice, 
-                analysis
-            );
+        // if (lastOrder.side === TradingBot.BUY) {
+        //     const dynamicStop = this.getDynamicStopLoss(
+        //         pair, 
+        //         lastOrder.price, 
+        //         currentPrice, 
+        //         analysis
+        //     );
             
-            console.log(`🛡️ Active Stop for ${pair.key}: ` +
-                `${dynamicStop.percentage}% below ${lastOrder.price}`);
-        }
+        //     console.log(`🛡️ Active Stop for ${pair.key}: ` +
+        //         `${dynamicStop.percentage}% below ${lastOrder.price}`);
+        // }
         
         if (lastOrder.side === TradingBot.SELL && buyIsApproved) {
             console.log('Last sell order filled. Conditions favorable for buying.');
@@ -453,7 +453,7 @@ class TradingBot {
         try {
             // Fetch data for multiple timeframes
             const [ohlcv1H, ohlcv4H, orders, currentPrice] = await this.fetchPairData(pair);
-
+            //console.log(ohlcv1H, ohlcv4H)
             // Error handling
             if (ohlcv1H.error || ohlcv4H.error) {
                 console.error('OHLCV error:', ohlcv1H.error || ohlcv4H.error);

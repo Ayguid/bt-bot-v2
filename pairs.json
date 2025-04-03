@@ -7,7 +7,7 @@
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
     "okDiff": 0.3,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "low",
     "riskProfile": "conservative"
   },
@@ -19,7 +19,7 @@
     "okLoss": -1.2,
     "maxStopLoss": -1.6,
     "okDiff": 0.35,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "low",
     "riskProfile": "conservative"
   },
@@ -31,7 +31,7 @@
     "okLoss": -1.5,
     "maxStopLoss": -2.5,
     "okDiff": 0.65,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "medium",
     "riskProfile": "moderate"
   },
@@ -43,7 +43,7 @@
     "okLoss": -1,
     "maxStopLoss": -1.5,
     "okDiff": 0.28,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "low",
     "riskProfile": "conservative"
   },
@@ -55,7 +55,7 @@
     "okLoss": -2.2,
     "maxStopLoss": -4.0,
     "okDiff": 1.2,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "high",
     "riskProfile": "aggressive"
   },
@@ -67,7 +67,7 @@
     "okLoss": -2.5,
     "maxStopLoss": -4,
     "okDiff": 1.5,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "high",
     "riskProfile": "aggressive"
   },
@@ -79,7 +79,7 @@
     "okLoss": -1.5,
     "maxStopLoss": -2.2,
     "okDiff": 0.55,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "medium",
     "riskProfile": "moderate"
   },
@@ -91,7 +91,7 @@
     "okLoss": -2.1,
     "maxStopLoss": -4.0,
     "okDiff": 1.1,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "high",
     "riskProfile": "aggressive"
   },
@@ -99,11 +99,11 @@
     "key": "DOGE_USDT",
     "orderQty": 45,
     "profitMgn": 2,
-    "belowPrice": 0.4,
+    "belowPrice": 0.2,
     "okLoss": -1.5,
     "maxStopLoss": -3.0,
     "okDiff": 0.8,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "medium",
     "riskProfile": "moderate"
   },
@@ -115,7 +115,7 @@
     "okLoss": -1.4,
     "maxStopLoss": -2.8,
     "okDiff": 0.7,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "medium",
     "riskProfile": "moderate"
   },
@@ -127,7 +127,7 @@
     "okLoss": -3.0,
     "maxStopLoss": -4.0,
     "okDiff": 1.8,
-    "tradeable": true,
+    "tradeable": false,
     "volatilityProfile": "high",
     "riskProfile": "aggressive"
   }

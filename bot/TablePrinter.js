@@ -37,10 +37,10 @@ class TablePrinter {
             { name: 'signal', title: 'Signal', alignment: 'center' },
             { name: 'trend', title: 'Trend', alignment: 'center' },
             { name: 'priceChange', title: 'Price Chg%', alignment: 'right' },
-            { name: 'volumeChange', title: 'Vol Chg%', alignment: 'right' },
+            { name: 'volumeChange', title: 'Avg Vol Chg%', alignment: 'right' },
             { name: 'timeframes', title: 'Timeframes', alignment: 'center' },
             { name: 'acceleration', title: 'Accel', alignment: 'right' },
-            //{ name: 'potentialMoves', title: 'Pos Moves', alignment: 'right' },
+            { name: 'potentialMoves', title: 'Pos Moves', alignment: 'right' },
             { name: 'tradeable', title: 'Trade', alignment: 'center' },
             { name: 'time', title: 'Time', alignment: 'right', color: 'custom_blue' }
         ];
@@ -64,7 +64,7 @@ class TablePrinter {
             volumeChange: recentTrend.avgVolumeChange || '-',
             timeframes: multiFrame.join(',') || '-',
             acceleration: recentTrend.priceAcceleration || '-',
-            //potentialMoves: recentTrend.potentialMove + '--' +analysis.signals?.[1]?.details.trend.potentialMove|| '-',
+            potentialMoves: recentTrend.potentialMove ,
             tradeable: element.tradeable ? '✓' : '✗',
             time: element.date ? element.date.split(' ')[1] : '-'
         };

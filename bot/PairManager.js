@@ -8,7 +8,7 @@ class PairManager {
     }
     //
     loadPairsFromFile() {
-        //console.log('Loading pairs from file');
+        //console.log('Loading Pairs');
         try {
             const data = fs.readFileSync(this.pairsFile);
             const pairsData = JSON.parse(data);
