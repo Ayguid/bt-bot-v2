@@ -34,7 +34,7 @@ class TelegramBotHandler {
         await this.tBot.sendMessage(process.env.TELEGRAM_MY_ID, response);
     }
 
-    async sendGroupChatAlert(pair, analysis) {
+    sendGroupChatAlert(pair, analysis, currentPrice) {
         if (!this.config.telegramBotEnabled) {
             console.log(`Telegram bot is disabled, not sending alert for ${pair}.`);
             return; // Exit early if the Telegram bot is disabled
@@ -49,7 +49,7 @@ class TelegramBotHandler {
         const timeSinceLastAlert = currentTime - lastAlertTime;
         if (timeSinceLastAlert >= this.config.alertCooldown) {
             try {
-                this.tBot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, `${normalizedSignal} signal for ${pair}`);
+                this.tBot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, `${normalizedSignal} signal for ${pair} price: ${currentPrice}`);
                 this.groupChatLastAlertTimes[normalizedSignal][pair] = currentTime;
                 console.log(`Alert sent for ${pair} (${normalizedSignal})`);
             } catch (error) {

@@ -27,6 +27,7 @@ class TradingBot {
     static EXPIRED = 'EXPIRED';
     //
     static STRONG_BUY = 'STRONG_BUY';
+    static EARLY_BUY = 'EARLY_BUY';
     static STRONG_SELL = 'STRONG_SELL';
     //
     constructor() {
@@ -71,9 +72,9 @@ class TradingBot {
         return action ? await action() : 'Unknown command.';
     }
 
-    sendGroupChatAlert(pair, analysis) {
+    sendGroupChatAlert(pair, analysis, currentPrice) {
         // Delegate alert sending to the Telegram bot handler
-        this.telegramBotHandler.sendGroupChatAlert(pair, analysis);
+        this.telegramBotHandler.sendGroupChatAlert(pair, analysis, currentPrice);
     }
 
     startBot() {
@@ -142,14 +143,14 @@ class TradingBot {
 
         console.log('\x1b[32mTrading\x1b[0m', pair.key, 'at', currentPrice);
 
-        // const buyIsApproved = analysis.consensusSignal === TradingBot.BUY || analysis.consensusSignal === TradingBot.STRONG_BUY;
-        // const sellIsApproved = analysis.consensusSignal === TradingBot.SELL || analysis.consensusSignal === TradingBot.STRONG_SELL;
+        const buyIsApproved = analysis.consensusSignal === TradingBot.BUY || analysis.consensusSignal === TradingBot.STRONG_BUY || analysis.consensusSignal === TradingBot.EARLY_BUY;
+        const sellIsApproved = analysis.consensusSignal === TradingBot.SELL || analysis.consensusSignal === TradingBot.STRONG_SELL;
 
-        // if (!Array.isArray(orders) || orders.length === 0) {
-        //     console.log('No existing orders - evaluating new trade');
-        //     await this.considerNewOrder(pair, false, currentPrice, buyIsApproved, sellIsApproved);
-        //     return;
-        // }
+        if (!Array.isArray(orders) || orders.length === 0) {
+            console.log('No existing orders - evaluating new trade');
+            await this.considerNewOrder(pair, false, currentPrice, buyIsApproved, sellIsApproved);
+            return;
+        }
 
         // const sortedOrders = [...orders].sort((a, b) => new Date(b.time) - new Date(a.time));
         // const [lastOrder, previousOrder] = sortedOrders.slice(0, 2);
@@ -176,7 +177,7 @@ class TradingBot {
     async considerNewOrder(pair, lastOrder = false, currentPrice, buyIsApproved, sellIsApproved) {
         if (buyIsApproved) {
             console.log('Conditions favorable for placing a buy order');
-            await this.exchangeManager.placeBuyOrder(pair, currentPrice);
+            //await this.exchangeManager.placeBuyOrder(pair, currentPrice);
         } else if (sellIsApproved) {
             console.log('Conditions favorable for placing a sell order');
         } else {
@@ -228,7 +229,7 @@ class TradingBot {
       
             // Send alerts
             const normalizedSignal = analysis.consensusSignal.toLowerCase();
-            if (['buy', 'sell', 'strong_buy', 'strong_sell'].includes(normalizedSignal) && this.config.telegramBotEnabled) this.sendGroupChatAlert(pair.key, analysis);
+            if (['buy', 'sell', 'strong_buy', 'strong_sell', 'early_buy'].includes(normalizedSignal) && this.config.telegramBotEnabled) this.sendGroupChatAlert(pair.key, analysis, currentPrice.price);
             // execute trades
             if (pair.tradeable && currentPrice?.price) {
                 await this.trade(pair, currentPrice.price, orders || [], analysis);
@@ -243,6 +244,7 @@ class TradingBot {
     }
 
     async botLoop() {
+        //this.sendGroupChatAlert('Init', {consensusSignal:'Starting'}, '123');
         while (this.config.isRunning) {
             console.time('Processing round');
             const results = await this.processAllPairs();

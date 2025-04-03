@@ -326,7 +326,8 @@ const IndicatorAnalyzer = {
 
 // Enhanced Main Analysis Class
 class MarketAnalyzer {
-    static analyzeCandles(candles, analysisWindow = candles.length) {
+    static analyzeCandles(candles, analysisWindow) {
+        if (!analysisWindow) throw new Error("analysisWindow parameter required");
         if (candles.length < 5) {
             return { status: "Insufficient data", description: "Need at least 5 candles" };
         }
@@ -395,7 +396,8 @@ class MarketAnalyzer {
         };
     }
 
-    static shouldBuyOrSell(indicators, candles, analysisWindow = candles.length) {
+    static shouldBuyOrSell(indicators, candles, analysisWindow) {
+        if (!analysisWindow) throw new Error("analysisWindow parameter required");
         if (candles.length < 2) {
             return {
                 signal: "Insufficient data",

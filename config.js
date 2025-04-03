@@ -1,7 +1,7 @@
 const config = {
     debug: true,
     isRunning: false,
-    telegramBotEnabled: false,
+    telegramBotEnabled: true,
     printTable: true,
     saveData: true,
     //
@@ -16,7 +16,7 @@ const config = {
     timeCheckInterval: 60000,
     maxTimeDifferenceMs: 1000,
     visualizationEnabled: true,  // Set to false to disable
-    visualizationPort: 3000,      // Change port if needed
+    visualizationPort: 6000,      // Change port if needed
     
 };
 

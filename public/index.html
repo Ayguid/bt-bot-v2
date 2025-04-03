@@ -503,7 +503,7 @@
       }
     }
     
-    function renderAnalysisDetails(analysis) {
+  function renderAnalysisDetails(analysis) {
   if (!analysis) return '<div class="no-analysis">No analysis data available</div>';
   
   return `
@@ -590,8 +590,8 @@
     function getTrendClass(trend) {
       if (!trend) return '';
       trend = trend.toLowerCase();
-      if (trend.includes('up') || trend.includes('increasing')) return 'up';
-      if (trend.includes('down') || trend.includes('decreasing')) return 'down';
+      if (trend.includes('bullish') || trend.includes('increasing')) return 'up';
+      if (trend.includes('bearish') || trend.includes('decreasing')) return 'down';
       if (trend.includes('sideways')) return 'sideways';
       if (trend.includes('stable')) return 'stable';
       return '';

@@ -19,7 +19,6 @@ class ExchangeManager {
             console.log('Fetching exchange information');
             this.exchangeInfo = await this.fetchExchangeInfo();
             console.log('Exchange information loaded');
-            //this.orderManager = new OrderManager(this.exchangeInfo, this.makeQueuedReq.bind(this));
             this.timeManager.startTimeCheck();// Start time checks
 
             //this.initialized = true;  
@@ -82,36 +81,11 @@ class ExchangeManager {
         return Promise.all([
             this.makeQueuedReq(klines, pair.joinedPair, timeframe1),
             this.makeQueuedReq(klines, pair.joinedPair, timeframe2),
-            pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [],
-            pair.tradeable ? this.makeQueuedReq(tickerPrice, pair.joinedPair) : null
+            pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [], // pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [],
+            this.makeQueuedReq(tickerPrice, pair.joinedPair)   // pair.tradeable ? this.makeQueuedReq(tickerPrice, pair.joinedPair) : null
         ]);
     }
 
-    // async getBalances(pair) {
-    //     const assetKey = pair.split("_")[0];
-    //     const stableKey = pair.split("_")[1];
-    //     console.log(assetKey, stableKey);
-    //     const TESTNET = process.env.TESTNET == 'true';
-    //     let baseAsset;
-    //     let quoteAsset;
-    //     if (TESTNET) {
-    //         const wallet = await this.makeQueuedReq(fetchMyAccount);
-    //         baseAsset = wallet.balances.find(asset => asset.asset == assetKey)
-    //         quoteAsset = wallet.balances.find(asset => asset.asset == stableKey)
-    //     } else {
-    //         [baseAsset, quoteAsset] = await Promise.all([
-    //             this.makeQueuedReq(userAsset, assetKey),
-    //             this.makeQueuedReq(userAsset, stableKey)
-    //         ]);
-    //         baseAsset = baseAsset[0]
-    //         quoteAsset = quoteAsset[0]
-    //     }
-    //     console.log(baseAsset, quoteAsset);
-    //     return [
-    //         baseAsset,
-    //         quoteAsset
-    //     ];
-    // }
     /* async getBalances(pair) {
         const assetKey = pair.split("_")[0];
         const stableKey = pair.split("_")[1];
