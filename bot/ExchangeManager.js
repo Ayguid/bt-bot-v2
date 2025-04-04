@@ -82,7 +82,7 @@ class ExchangeManager {
             this.makeQueuedReq(klines, pair.joinedPair, timeframe1),
             this.makeQueuedReq(klines, pair.joinedPair, timeframe2),
             pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [], // pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [],
-            this.makeQueuedReq(tickerPrice, pair.joinedPair)   // pair.tradeable ? this.makeQueuedReq(tickerPrice, pair.joinedPair) : null
+            //this.makeQueuedReq(tickerPrice, pair.joinedPair)   // pair.tradeable ? this.makeQueuedReq(tickerPrice, pair.joinedPair) : null
         ]);
     }
 

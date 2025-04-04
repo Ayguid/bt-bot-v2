@@ -96,6 +96,30 @@
     "riskProfile": "aggressive"
   },
   {
+    "key": "FET_USDT",
+    "orderQty": 30,
+    "profitMgn": 3,
+    "belowPrice": 0.5,
+    "okLoss": -2.1,
+    "maxStopLoss": -4.0,
+    "okDiff": 1.1,
+    "tradeable": false,
+    "volatilityProfile": "high",
+    "riskProfile": "aggressive"
+  },
+  {
+    "key": "USUAL_USDT",
+    "orderQty": 30,
+    "profitMgn": 3,
+    "belowPrice": 0.5,
+    "okLoss": -2.1,
+    "maxStopLoss": -4.0,
+    "okDiff": 1.1,
+    "tradeable": false,
+    "volatilityProfile": "high",
+    "riskProfile": "aggressive"
+  },
+  {
     "key": "DOGE_USDT",
     "orderQty": 45,
     "profitMgn": 2,
@@ -108,7 +132,31 @@
     "riskProfile": "moderate"
   },
   {
-    "key": "NEO_USDT",
+    "key": "ALPACA_USDT",
+    "orderQty": 40,
+    "profitMgn": 2.5,
+    "belowPrice": 0.4,
+    "okLoss": -1.4,
+    "maxStopLoss": -2.8,
+    "okDiff": 0.7,
+    "tradeable": false,
+    "volatilityProfile": "medium",
+    "riskProfile": "moderate"
+  },
+  {
+    "key": "DGB_USDT",
+    "orderQty": 40,
+    "profitMgn": 2.5,
+    "belowPrice": 0.4,
+    "okLoss": -1.4,
+    "maxStopLoss": -2.8,
+    "okDiff": 0.7,
+    "tradeable": false,
+    "volatilityProfile": "medium",
+    "riskProfile": "moderate"
+  },
+  {
+    "key": "RARE_USDT",
     "orderQty": 40,
     "profitMgn": 2.5,
     "belowPrice": 0.4,

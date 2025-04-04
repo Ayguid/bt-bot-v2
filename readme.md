@@ -51,8 +51,8 @@ A sophisticated market analysis engine and trading bot framework designed for cr
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/crypto-analyzer.git
-cd crypto-analyzer
+git clone https://github.com/yourusername/bt-bot-v2.git
+cd 'bt-bot-v2'
 ```
 
 2. Install dependencies:
@@ -79,7 +79,7 @@ cp .env.example .env
 
 Edit `config.js` for these key settings:
 ```javascript
-module.exports = {
+const config = {
   analysisWindow: 24,       // Hours of historical data to analyze
   klinesInterval_1: '1h',   // Primary timeframe
   klinesInterval_2: '4h',   // Secondary timeframe
@@ -153,4 +153,3 @@ MIT License - See LICENSE for details.
 
 ## Disclaimer
 This software is for educational purposes only. Use at your own risk. The developers are not responsible for any trading losses.
-

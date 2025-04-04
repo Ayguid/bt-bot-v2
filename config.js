@@ -3,21 +3,48 @@ const config = {
     isRunning: false,
     telegramBotEnabled: true,
     printTable: true,
-    saveData: true,
+    saveData: false,
     //
     loopDelay: 500, //delay for the whole pairs array loop
-    pairDelay: false, //delay between pairs, default is false, just for debuggin
+    pairDelay: 500, //delay between pairs, default is false, just for debuggin
     alertCooldown: 10 * 60 * 1000, // 10 minutes in milliseconds
     klinesInterval_1: '1h',
     klinesInterval_2: '4h',
-    analysisWindow: 24, //24hr/2hr = 12hr, 24hr trends will be returned
+    analysisWindow: 24, // 24hr trends will be returned
     //server time diffs
     shouldResynch: false,
     timeCheckInterval: 60000,
     maxTimeDifferenceMs: 1000,
     visualizationEnabled: true,  // Set to false to disable
-    visualizationPort: 6000,      // Change port if needed
+    visualizationPort: 9000,      // Change port if needed
     
 };
 
 module.exports = config;
+
+
+/*
+// For more active trading
+const activeTraderConfig = {
+    klinesInterval_1: '15m',
+    klinesInterval_2: '1h',
+    analysisWindow: 12, // 12 hours
+    // ... other settings
+};
+
+// For swing trading
+const swingTraderConfig = {
+    klinesInterval_1: '4h',
+    klinesInterval_2: '1d',
+    analysisWindow: 72, // 3 days
+    // ... other settings
+};
+
+// For long-term investing
+const investorConfig = {
+    klinesInterval_1: '1d',
+    klinesInterval_2: '1w',
+    analysisWindow: 168, // 1 week
+    // ... other settings
+};
+*/
