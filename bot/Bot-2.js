@@ -116,7 +116,7 @@ class TradingBot {
             },
             {
                 analysisWindow: this.config.analysisWindow,
-                primaryTimeframe: this.config.klinesInterval_1,
+                primaryTimeframe: this.config.klinesprimary,
                 weights: {
                     [this.config.klinesInterval_1]: 1,
                     [this.config.klinesInterval_2]: 2

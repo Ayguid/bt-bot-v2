@@ -1,5 +1,5 @@
 require('dotenv').config(); // Environment variables
-const { fetchMyAccount, avgPrice, tickerPrice, fetchMyOrders, fetchMyTrades, placeOrder, getOrder, cancelOrder, assetDetail, klines, exchangeInfo} = require('./utils/binance-spot.js');
+const { fetchMyAccount, avgPrice, tickerPrice, fetchMyOrders, fetchMyTrades, placeOrder, getOrder, cancelOrder, assetDetail, klines, exchangeInfo, depth} = require('./utils/binance-spot.js');
 const readline = require('node:readline');
 
 const rl = readline.createInterface({
@@ -53,6 +53,8 @@ placeOrder('ADAUSDC', 'BUY', 'LIMIT', {price: 0.5193, quantity: 100, timeInForce
 */
 //placeOrder('BTCUSDT', 'BUY', 'LIMIT', {price: 66129, quantity: 0.1, timeInForce: 'GTC'});
 
+const results = async () => {const res =  await  depth('BNBUSDT'); console.log(res)}
+results();
 
 //cancelOrder('BTCUSDT', 7066174);
 //placeOrder('BTCUSDT', 'SELL', 'LIMIT', {price: 63056, quantity: 0.1, timeInForce: 'GTC'});

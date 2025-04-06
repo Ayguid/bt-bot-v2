@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const RateLimitedQueue = require('../classes/RateLimitedQueue');
-const { klines, fetchMyOrders, tickerPrice, userAsset, fetchMyAccount, placeOrder, cancelOrder, cancelAndReplace, exchangeInfo } = require('../utils/binance-spot');
+const { klines, fetchMyOrders, tickerPrice, userAsset, fetchMyAccount, placeOrder, cancelOrder, cancelAndReplace, exchangeInfo, depth } = require('../utils/binance-spot');
 const TimeManager = require('./TimeManager');
 
 class ExchangeManager {
@@ -83,6 +83,7 @@ class ExchangeManager {
             this.makeQueuedReq(klines, pair.joinedPair, timeframe2),
             pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [], // pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [],
             //this.makeQueuedReq(tickerPrice, pair.joinedPair)   // pair.tradeable ? this.makeQueuedReq(tickerPrice, pair.joinedPair) : null
+            //this.makeQueuedReq(depth, pair.joinedPair)
         ]);
     }
 

@@ -1,351 +1,122 @@
+// Configuration Object
 const AnalysisConfig = {
-    // ===== GENERAL ANALYSIS SETTINGS =====
+    // General Analysis Settings
     MIN_DATA_POINTS: {
         DEFAULT: 5,
-        EARLY_DETECTION: 6,
-        TREND_ANALYSIS: 8,
-        PATTERN_DETECTION: 4
+        EARLY_DETECTION: 8,
+        TREND_ANALYSIS: 10,
+        PATTERN_DETECTION: 3
     },
 
-    // ===== PRICE MOVEMENT THRESHOLDS =====
+    // Price Movement Thresholds
     PRICE: {
-        SIGNIFICANT_CHANGE: 0.05, // Increased from 0.04
-        STRONG_CHANGE: 0.15, // Increased from 0.12
-        
-        ACCELERATION_THRESHOLD: {
-            DEFAULT: 0.04,
-            HIGH_VOLATILITY: 0.06,
-            LOW_VOLATILITY: 0.02
-        },
-        
-        DECELERATION_THRESHOLD: {
-            DEFAULT: -0.04,
-            HIGH_VOLATILITY: -0.06,
-            LOW_VOLATILITY: -0.02
-        },
-        
-        MODERATE_ACCELERATION: 0.025,
-        MODERATE_DECELERATION: -0.025,
-        GAP_PERCENTAGE: 0.01,
-        PULLBACK_MAX_DIP: 0.01
+        SIGNIFICANT_CHANGE: 0.18,       // 0.18 18% price change
+        STRONG_CHANGE: 0.45,            // 45% price change
+        ACCELERATION_THRESHOLD: 0.12,   // 12% acceleration
+        DECELERATION_THRESHOLD: -0.10,  // -10% deceleration
+        MODERATE_ACCELERATION: 0.1,     // 10% moderate acceleration
+        MODERATE_DECELERATION: -0.1,    // -10% moderate deceleration
+        GAP_PERCENTAGE: 0.005,          // 0.5% gap
+        PULLBACK_MAX_DIP: 0.02          // 2% pullback
     },
 
-    // ===== VOLUME ANALYSIS =====
+    // Volume Analysis
     VOLUME: {
-        SPIKE_MULTIPLIER: {
-            DEFAULT: 1.4,    // 140% instead of 160%
-            HIGH_VOLATILITY: 1.7, //1.9
-            LOW_VOLATILITY: 1.4
-        },
-        
-        CRASH_MULTIPLIER: {
-            DEFAULT: 0.55,
-            HIGH_VOLATILITY: 0.35,
-            LOW_VOLATILITY: 0.65
-        },
-        
-        SIGNIFICANT_INCREASE: 1.25,  // Was 1.4
-        SIGNIFICANT_DECREASE: 0.6,
-        DIVERGENCE_THRESHOLD: 0.35,
-        ENGULFING_INCREASE_REQUIRED: 35,
-        AVG_WINDOW: 12
+        SPIKE_MULTIPLIER: 1.8,            // 2x average volume
+        CRASH_MULTIPLIER: 0.6,          // 0.5x average volume
+        SIGNIFICANT_INCREASE: 1.5,       // 1.5x volume increase
+        SIGNIFICANT_DECREASE: 0.7,       // 0.7x volume decrease
+        DIVERGENCE_THRESHOLD: 0.5,       // 50% divergence threshold
+        ENGULFING_INCREASE_REQUIRED: 8  // 12% volume increase for engulfing
     },
 
-    // ===== INDICATOR THRESHOLDS =====
+    // Indicator Thresholds
     INDICATORS: {
         MACD: {
-            SIGNIFICANT_HISTOGRAM: {
-                DEFAULT: 0.0003,    // 0.03% of price
-                SHORT_TERM: 0.0004, // 0.04%
-                MEDIUM_TERM: 0.0003,
-                LONG_TERM: 0.0002   // 0.02%
-            },
-            STRONG_HISTOGRAM: {
-                DEFAULT: 0.0005,    // 0.05%
-                SHORT_TERM: 0.0006, // 0.06%
-                MEDIUM_TERM: 0.0005,
-                LONG_TERM: 0.0004   // 0.04%
-            }
+            SIGNIFICANT_HISTOGRAM: 0.05, // 2% of price   0.2//0.05, // Increase for crypto volatility
+            STRONG_HISTOGRAM: 0.03        // 3% of price
         },
-        
         RSI: {
-            OVERSOLD: {
-                DEFAULT: 35,    // Was 28
-                SHORT_TERM: 23,
-                MEDIUM_TERM: 28,
-                LONG_TERM: 33
-            },
-            OVERBOUGHT: {
-                DEFAULT: 65,    // Was 73
-                SHORT_TERM: 78,
-                MEDIUM_TERM: 73,
-                LONG_TERM: 68
-            },
-            STRONG_OVERSOLD: {
-                DEFAULT: 23,
-                SHORT_TERM: 18,
-                MEDIUM_TERM: 23,
-                LONG_TERM: 28
-            },
-            STRONG_OVERBOUGHT: {
-                DEFAULT: 78,
-                SHORT_TERM: 83,
-                MEDIUM_TERM: 78,
-                LONG_TERM: 73
-            },
-            VOLATILE_ADJUSTMENT: {
-                OVERSOLD: {
-                    DEFAULT: 25,
-                    SHORT_TERM: 20,
-                    MEDIUM_TERM: 25,
-                    LONG_TERM: 30
-                },
-                OVERBOUGHT: {
-                    DEFAULT: 80,
-                    SHORT_TERM: 85,
-                    MEDIUM_TERM: 80,
-                    LONG_TERM: 75
-                }
+            OVERSOLD: 38,//35, // Crypto rarely hits traditional 30
+            OVERBOUGHT: 72, //70
+            STRONG_OVERSOLD: 25,
+            STRONG_OVERBOUGHT: 75,
+            VOLATILE_ADJUSTMENT: {        // For high volatility periods
+                OVERSOLD: 22,
+                OVERBOUGHT: 78
             }
         },
-        
         STOCH_RSI: {
-            OVERSOLD: {
-                DEFAULT: 20,
-                SHORT_TERM: 15,
-                MEDIUM_TERM: 20,
-                LONG_TERM: 25
-            },
-            OVERBOUGHT: {
-                DEFAULT: 80,
-                SHORT_TERM: 85,
-                MEDIUM_TERM: 80,
-                LONG_TERM: 75
-            }
+            OVERSOLD: 20, //25, More conservative
+            OVERBOUGHT: 80 //85 More conservative
         },
-        
         AO: {
-            SIGNIFICANT_VALUE: {
-                DEFAULT: 0.3,
-                SHORT_TERM: 0.4,
-                MEDIUM_TERM: 0.3,
-                LONG_TERM: 0.2
-            }
-        },
-        
-        ADX: {
-            TREND_THRESHOLDS: {
-                VERY_STRONG: {
-                    DEFAULT: 50,
-                    SHORT_TERM: 55,
-                    MEDIUM_TERM: 50,
-                    LONG_TERM: 45
-                },
-                STRONG: {
-                    DEFAULT: 40,
-                    SHORT_TERM: 45,
-                    MEDIUM_TERM: 40,
-                    LONG_TERM: 35
-                },
-                MODERATE: {
-                    DEFAULT: 25,
-                    SHORT_TERM: 30,
-                    MEDIUM_TERM: 25,
-                    LONG_TERM: 20
-                },
-                WEAK: 0
-            },
-            DIRECTIONAL_THRESHOLD: {
-                DEFAULT: 25,
-                SHORT_TERM: 30,
-                MEDIUM_TERM: 25,
-                LONG_TERM: 20
-            }
-        },
-        
-        EMA: {
-            SIGNIFICANT_DISTANCE: {
-                DEFAULT: 0.02,
-                SHORT_TERM: 0.03,
-                MEDIUM_TERM: 0.02,
-                LONG_TERM: 0.015
-            },
-            DISTANCE_THRESHOLD: {
-                DEFAULT: 1.5,
-                SHORT_TERM: 2,
-                MEDIUM_TERM: 1.5,
-                LONG_TERM: 1
-            }
-        },
-        
-        ATR: {
-            VOLATILITY_MULTIPLIERS: {
-                HIGH: 1.5,
-                MEDIUM: 1.2
-            }
+            SIGNIFICANT_VALUE:0.3 // 0.5  Lower for crypto
         }
     },
 
-    // ===== PATTERN DETECTION =====
+    // Pattern Detection
     PATTERNS: {
-        BODY_SIZE_RATIO: 0.8,
-        SMALL_BODY_RATIO: 0.2,
-        STAR_PATTERN_PRICE_CHANGE: 0.02
+        BODY_SIZE_RATIO: 0.7,           // 70% of average body size
+        SMALL_BODY_RATIO: 0.3,           // 30% of average body size
+        STAR_PATTERN_PRICE_CHANGE: 0.01   // 1% price change for star patterns
     },
 
-    // ===== EARLY DETECTION =====
+    // Early Detection
     EARLY_DETECTION: {
-        PRICE_ABOVE_AVG: 1.005,  // Was 1.01 (0.5% vs 1%)
-        VOLUME_ABOVE_AVG: 1.5,    // Was 1.8
-        PRICE_BELOW_AVG: 0.99,
-        VOLUME_BELOW_AVG: 0.5,
-        ROC_STRENGTH_THRESHOLD: 0.03
+        PRICE_ABOVE_AVG: 1.02,          // 2% above average
+        VOLUME_ABOVE_AVG: 1.5,          // 50% above average
+        PRICE_BELOW_AVG: 0.98,          // 2% below average
+        VOLUME_BELOW_AVG: 0.7,          // 30% below average (fixed from 1.3)
+        ROC_STRENGTH_THRESHOLD: 0.015    // 1.5% rate of change
     },
 
-    // ===== SCORING SYSTEM =====
+    // Scoring System
     SCORING: {
         BASE_THRESHOLDS: {
-            BULLISH: { 
-                buy: 6,
-                strongBuy: 9,
-                sell: 4,
-                strongSell: 7
-            },
-            BEARISH: { 
-                buy: 6,
-                strongBuy: 9,
-                sell: 4,
-                strongSell: 7
-            },
-            SIDEWAYS: { 
-                buy: 5,
-                strongBuy: 8,
-                sell: 5,
-                strongSell: 8
-            }
+            // Bullish: Buy signals trigger more easily than sells
+            BULLISH: { buy: 4, strongBuy: 7, sell: 6, strongSell: 9 },
+            // Bearish: Sell signals trigger more easily than buys
+            BEARISH: { buy: 7, strongBuy: 10, sell: 3, strongSell: 6 },
+            // Neutral: Balanced
+            SIDEWAYS: { buy: 5, strongBuy: 8, sell: 5, strongSell: 8 }
         },
-        
         EARLY_DETECTION_THRESHOLDS: {
-            BULLISH: { 
-                buy: 4,
-                strongBuy: 7,
-                sell: 3,
-                strongSell: 6
-            },
-            BEARISH: { 
-                buy: 5,
-                strongBuy: 8,
-                sell: 3,
-                strongSell: 6
-            },
-            SIDEWAYS: { 
-                buy: 6,
-                strongBuy: 9,
-                sell: 4,
-                strongSell: 7
-            }
+            BULLISH: { buy: 4, strongBuy: 7, sell: 3, strongSell: 6 },
+            BEARISH: { buy: 5, strongBuy: 8, sell: 3, strongSell: 6 },
+            SIDEWAYS: { buy: 6, strongBuy: 9, sell: 4, strongSell: 7 }
         },
-        
         TREND_MULTIPLIERS: {
-            BULLISH: { buy: 1.2, sell: 0.8 },  // Was buy:1.1//BULLISH: { buy: 1.1, sell: 0.9 },
-            BEARISH: { buy: 0.9, sell: 1.1 },   // Was sell:1.2//BEARISH: { buy: 0.8, sell: 1.2 },
+            BULLISH: { buy: 1.1, sell: 0.9 },
+            BEARISH: { buy: 0.8, sell: 1.2 },
             SIDEWAYS: { buy: 1.0, sell: 1.0 }
         },
-        
         VOLUME_MULTIPLIER: 1.3,
-        
         SIGNAL_MULTIPLIERS: {
             STRONG: 1.5,
             EARLY: 1.3,
             WEAK: 0.8
-        },
-        
-        CONSENSUS_THRESHOLDS: {
-            STRONG_BUY: 7,  // Was 8
-            BUY: 5,          // Was 6
-            STRONG_SELL: 8,
-            SELL: 6
-        },
-        
-        OPPOSING_SIGNAL_THRESHOLDS: {
-            EARLY_WEAK: 2,
-            EARLY_STRONG: 3,
-            REGULAR_WEAK: 3,
-            REGULAR_STRONG: 4
-        },
-        
-        EARLY_SIGNAL_THRESHOLDS: {
-            MIN_AGREEMENT: 1,
-            SCORE_THRESHOLD: 7
-        },
-        
-        RSI_STRENGTH_THRESHOLD: 2
+        }
     },
 
-    // ===== TIMEFRAME ANALYSIS =====
+    // Timeframe Analysis
     TIMEFRAMES: {
         DEFAULT_WEIGHTS: {
-            '1m': 0.5,
-            '5m': 0.7,
+            '1m': 0.8,
+            '5m': 0.9,
             '15m': 1,
-            '1h': 1.3,
-            '4h': 1.6,
-            '1d': 2.0,
+            '1h': 1.2,
+            '4h': 1.5,
+            '1d': 2,
             '1w': 2.5
         },
-        MIN_AGREEMENT_RATIO: 0.65
+        MIN_AGREEMENT_RATIO: 0.6        // 60% of timeframes must agree
     },
 
-    // ===== TREND CLASSIFICATION =====
+    // Trend Classification
     TREND: {
-        PRICE_CHANGE_THRESHOLD: 0.1,
-        VOLUME_CHANGE_THRESHOLD: 3
-    },
-
-    // ===== TIMEFRAME CLASSIFICATION =====
-    TIMEFRAME_CLASSIFICATION: {
-        SHORT_TERM: ['1m', '5m', '15m', '30m'],
-        MEDIUM_TERM: ['1h', '4h', '6h', '12h'],
-        LONG_TERM: ['1d', '1w', '1M']
-    }
-};
-// Timeframe Utility Functions
-const TimeframeUtils = {
-    getTimeframeType: (timeframe) => {
-        if (!timeframe) return 'DEFAULT';
-        const tf = timeframe.toString().toLowerCase();
-        
-        if (AnalysisConfig.TIMEFRAME_CLASSIFICATION.SHORT_TERM.some(t => tf.includes(t))) {
-            return 'SHORT_TERM';
-        }
-        if (AnalysisConfig.TIMEFRAME_CLASSIFICATION.MEDIUM_TERM.some(t => tf.includes(t))) {
-            return 'MEDIUM_TERM';
-        }
-        if (AnalysisConfig.TIMEFRAME_CLASSIFICATION.LONG_TERM.some(t => tf.includes(t))) {
-            return 'LONG_TERM';
-        }
-        return 'DEFAULT';
-    },
-
-    getIndicatorConfig: (indicator, param, timeframe) => {
-        const timeframeType = TimeframeUtils.getTimeframeType(timeframe);
-        
-        // Handle nested properties (like 'ADX.TREND_THRESHOLDS.VERY_STRONG')
-        const path = param.split('.');
-        let config = AnalysisConfig.INDICATORS[indicator];
-        
-        for (const p of path) {
-            if (!config) break;
-            config = config[p];
-        }
-        
-        if (!config) return undefined;
-        
-        if (typeof config === 'object' && config[timeframeType] !== undefined) {
-            return config[timeframeType];
-        }
-        
-        return typeof config === 'object' ? config.DEFAULT : config;
+        PRICE_CHANGE_THRESHOLD: 0.2,     // 20% price change
+        VOLUME_CHANGE_THRESHOLD: 5       // 5% volume change
     }
 };
 
@@ -454,122 +225,73 @@ const EarlyDetectionUtils = {
 // Enhanced Price Analysis Module
 const PriceAnalyzer = {
     analyzeTrend: (candles, windowSize, patternWindowSize = AnalysisConfig.MIN_DATA_POINTS.EARLY_DETECTION) => {
-        const emptyResult = {
-            priceChanges: [],
-            acceleration: 0,
-            avgPriceChange: 0,
-            trendStrength: "NO_DATA",
-            volatilityType: "MEDIUM",
-            isStrongAcceleration: false,
-            isStrongDeceleration: false,
-            potentialReversal: false
-        };
-
-        // Input validation
         if (!Array.isArray(candles)) {
             console.error('Invalid input: candles must be an array');
-            return emptyResult;
+            return null;
         }
-
-        const minRequired = Math.max(
-            AnalysisConfig.MIN_DATA_POINTS.DEFAULT,
-            Math.min(windowSize, patternWindowSize)
-        );
         
+        const minRequired = Math.min(windowSize, patternWindowSize);
         if (candles.length < minRequired) {
             console.warn(`Insufficient data: Need at least ${minRequired} candles, got ${candles.length}`);
-            return emptyResult;
+            return null;
         }
-
-        // Prepare data windows
+    
         const mainWindow = candles.slice(-windowSize);
         const patternWindow = candles.slice(-patternWindowSize);
         
-        // Calculate volatility type
-        const getVolatilityType = (candles) => {
-            const highs = candles.map(c => c[2]);
-            const lows = candles.map(c => c[3]);
-            const range = Math.max(...highs) - Math.min(...lows);
-            const avgPrice = candles.reduce((sum, c) => sum + c[4], 0) / candles.length;
-            const volatility = range / avgPrice;
-            
-            return volatility > 0.1 ? "HIGH" :
-                   volatility < 0.03 ? "LOW" : "MEDIUM";
-        };
-
-        const volatilityType = getVolatilityType(mainWindow);
-        
-        // Get appropriate thresholds based on volatility
-        const accelThreshold = AnalysisConfig.PRICE.ACCELERATION_THRESHOLD[volatilityType] || 
-                             AnalysisConfig.PRICE.ACCELERATION_THRESHOLD.DEFAULT;
-        const decelThreshold = AnalysisConfig.PRICE.DECELERATION_THRESHOLD[volatilityType] || 
-                             AnalysisConfig.PRICE.DECELERATION_THRESHOLD.DEFAULT;
-        const significantChange = AnalysisConfig.PRICE.SIGNIFICANT_CHANGE[volatilityType] || 
-                                AnalysisConfig.PRICE.SIGNIFICANT_CHANGE.DEFAULT;
-
-        // Calculate price changes and acceleration
         const priceChanges = [];
-        const patternChanges = [];
+        const patternChanges = []; // Only used for acceleration calculation
         
         for (let i = 1; i < mainWindow.length; i++) {
-            const prevClose = IndicatorUtils.extractNumber(mainWindow[i-1][4]);
-            const currClose = IndicatorUtils.extractNumber(mainWindow[i][4]);
-            
-            if (prevClose !== 0) {
-                const change = IndicatorUtils.calculatePercentageChange(currClose, prevClose);
-                priceChanges.push(change);
+            try {
+                const prevClose = IndicatorUtils.extractNumber(mainWindow[i-1][4]);
+                const currClose = IndicatorUtils.extractNumber(mainWindow[i][4]);
+                
+                if (prevClose !== 0) {
+                    priceChanges.push(IndicatorUtils.calculatePercentageChange(currClose, prevClose));
+                } else {
+                    priceChanges.push(0);
+                }
                 
                 if (i < patternWindow.length) {
-                    const patternPrev = IndicatorUtils.extractNumber(patternWindow[i-1][4]);
-                    const patternCurr = IndicatorUtils.extractNumber(patternWindow[i][4]);
-                    if (patternPrev !== 0) {
-                        patternChanges.push(
-                            IndicatorUtils.calculatePercentageChange(patternCurr, patternPrev)
-                        );
+                    const patternPrevClose = IndicatorUtils.extractNumber(patternWindow[i-1][4]);
+                    const patternCurrClose = IndicatorUtils.extractNumber(patternWindow[i][4]);
+                    
+                    if (patternPrevClose !== 0) {
+                        patternChanges.push(IndicatorUtils.calculatePercentageChange(patternCurrClose, patternPrevClose));
+                    } else {
+                        patternChanges.push(0);
                     }
                 }
+            } catch (e) {
+                console.error('Error calculating price changes:', e);
+                priceChanges.push(0);
+                if (i < patternWindow.length) patternChanges.push(0);
             }
         }
-
-        // Calculate acceleration metrics
+    
         const priceAcceleration = [];
         for (let i = 1; i < patternChanges.length; i++) {
             priceAcceleration.push(patternChanges[i] - patternChanges[i-1]);
         }
-
-        const avgAcceleration = priceAcceleration.length > 0 ? 
-            priceAcceleration.reduce((sum, a) => sum + a, 0) / priceAcceleration.length : 0;
-        
-        const avgPriceChange = priceChanges.length > 0 ?
-            priceChanges.reduce((sum, p) => sum + p, 0) / priceChanges.length : 0;
-
-        // Determine trend characteristics
-        const isStrongAcceleration = avgAcceleration > accelThreshold;
-        const isStrongDeceleration = avgAcceleration < decelThreshold;
-        
-        let trendStrength = "NEUTRAL";
-        if (Math.abs(avgPriceChange) > significantChange) {
-            trendStrength = avgPriceChange > 0 ? 
-                (isStrongAcceleration ? "STRONG_UP" : "UP") :
-                (isStrongDeceleration ? "STRONG_DOWN" : "DOWN");
-        }
-
-        // Check for potential reversal patterns
-        const lastThree = candles.slice(-3).map(c => c[4]);
-        const potentialReversal = (
-            (trendStrength.includes("UP") && lastThree[0] > lastThree[1] && lastThree[1] > lastThree[2]) ||
-            (trendStrength.includes("DOWN") && lastThree[0] < lastThree[1] && lastThree[1] < lastThree[2])
-        ) && Math.abs(avgAcceleration) > (accelThreshold * 0.7);
-
+    
+        const safeAverage = (values, decimals = 4) => {
+            if (!values || !values.length) return 0;
+            const sum = values.reduce((s, v) => s + v, 0);
+            const avg = sum / values.length;
+            return parseFloat(avg.toFixed(decimals));
+        };
+    
         return {
             priceChanges,
-            acceleration: parseFloat(avgAcceleration.toFixed(4)),
-            avgPriceChange: parseFloat(avgPriceChange.toFixed(2)),
-            trendStrength,
-            volatilityType,
-            isStrongAcceleration,
-            isStrongDeceleration,
-            potentialReversal,
+            acceleration: safeAverage(priceAcceleration),
+            avgPriceChange: safeAverage(priceChanges, 2),
+            meta: {
+                windowSize,
+                patternWindowSize,
+                analyzedCandles: mainWindow.length,
+                lastCandleTime: mainWindow[mainWindow.length - 1]?.[0] || null
+            }
         };
     },
 
@@ -670,12 +392,10 @@ const VolumeAnalyzer = {
             avgChange: 0,
             trend: "NO_DATA",
             volumeSpike: false,
-            volumeCrash: false,
-            volatilityType: "DEFAULT"
+            volumeCrash: false
         };
 
-        // Input validation
-        if (!candles || !Array.isArray(candles)) {
+        if (!candles || !Array.isArray(candles) || candles.length === 0) {
             return emptyResult;
         }
 
@@ -684,66 +404,30 @@ const VolumeAnalyzer = {
             return emptyResult;
         }
 
-        // Calculate volatility type
-        const getVolatilityType = (candles) => {
-            if (candles.length < 5) return "DEFAULT";
-            
-            const priceChanges = candles.slice(-10).map((c, i, arr) => 
-                i > 0 ? Math.abs(c[4] - arr[i-1][4]) / Math.max(arr[i-1][4], 0.0001) : 0
-            );
-            const avgChange = priceChanges.reduce((sum, v) => sum + v, 0) / priceChanges.length;
-            
-            return avgChange > 0.02 ? "HIGH_VOLATILITY" : 
-                   avgChange < 0.005 ? "LOW_VOLATILITY" : "DEFAULT";
-        };
-
-        const volatilityType = getVolatilityType(validCandles);
-        
-        // Get appropriate multipliers based on volatility
-        const spikeMultiplier = AnalysisConfig.VOLUME.SPIKE_MULTIPLIER[volatilityType] || 
-                              AnalysisConfig.VOLUME.SPIKE_MULTIPLIER.DEFAULT;
-        const crashMultiplier = AnalysisConfig.VOLUME.CRASH_MULTIPLIER[volatilityType] || 
-                              AnalysisConfig.VOLUME.CRASH_MULTIPLIER.DEFAULT;
-
-        // Analyze volume changes
         const slicedCandles = validCandles.slice(-windowSize);
-        const recentVolumes = validCandles.slice(-AnalysisConfig.VOLUME.AVG_WINDOW)
-            .map(c => IndicatorUtils.extractNumber(c[5]));
-        
+        const recentVolumes = validCandles.slice(-20).map(c => IndicatorUtils.extractNumber(c[5]));
         const avgVolume = recentVolumes.length > 0 ? 
             recentVolumes.reduce((sum, vol) => sum + vol, 0) / recentVolumes.length : 0;
-        
         const currentVolume = IndicatorUtils.extractNumber(validCandles[validCandles.length - 1][5]);
         
         const volumeChanges = [];
         for (let i = 1; i < slicedCandles.length; i++) {
             const prevVol = IndicatorUtils.extractNumber(slicedCandles[i-1][5]);
             const currVol = IndicatorUtils.extractNumber(slicedCandles[i][5]);
-            const change = prevVol !== 0 ? 
-                IndicatorUtils.calculatePercentageChange(currVol, prevVol) : 0;
-            volumeChanges.push(change);
+            volumeChanges.push(IndicatorUtils.calculatePercentageChange(currVol, prevVol));
         }
 
-        // Determine trend characteristics
-        const isIncreasing = IndicatorUtils.isIncreasing(
-            slicedCandles.map(c => IndicatorUtils.extractNumber(c[5]))
-        );
-        const isDecreasing = IndicatorUtils.isDecreasing(
-            slicedCandles.map(c => IndicatorUtils.extractNumber(c[5]))
-        );
-        
+        const isIncreasing = IndicatorUtils.isIncreasing(volumeChanges);
+        const isDecreasing = IndicatorUtils.isDecreasing(volumeChanges);
         const avgChange = volumeChanges.length > 0 ? 
             volumeChanges.reduce((sum, change) => sum + change, 0) / volumeChanges.length : 0;
 
-        // Classify trend strength
         let trend;
-        if (avgChange > AnalysisConfig.TREND.VOLUME_CHANGE_THRESHOLD) {
-            trend = isIncreasing ? "STRONG_INCREASING" : "INCREASING";
-        } else if (avgChange < -AnalysisConfig.TREND.VOLUME_CHANGE_THRESHOLD) {
-            trend = isDecreasing ? "STRONG_DECREASING" : "DECREASING";
-        } else {
-            trend = "STABLE";
-        }
+        if (avgChange > AnalysisConfig.TREND.VOLUME_CHANGE_THRESHOLD && isIncreasing) trend = "STRONG_INCREASING";
+        else if (avgChange > AnalysisConfig.TREND.VOLUME_CHANGE_THRESHOLD) trend = "INCREASING";
+        else if (avgChange < -AnalysisConfig.TREND.VOLUME_CHANGE_THRESHOLD && isDecreasing) trend = "STRONG_DECREASING";
+        else if (avgChange < -AnalysisConfig.TREND.VOLUME_CHANGE_THRESHOLD) trend = "DECREASING";
+        else trend = "STABLE";
 
         return {
             changes: volumeChanges,
@@ -751,14 +435,8 @@ const VolumeAnalyzer = {
             isDecreasing,
             avgChange: parseFloat(avgChange.toFixed(2)),
             trend,
-            volumeSpike: currentVolume > avgVolume * spikeMultiplier,
-            volumeCrash: currentVolume < avgVolume * crashMultiplier,
-            volatilityType,
-            currentVolume,
-            avgVolume,
-            spikeMultiplier,
-            crashMultiplier,
-            volumeRatio: avgVolume > 0 ? (currentVolume / avgVolume).toFixed(2) : 0,
+            volumeSpike: currentVolume > avgVolume * AnalysisConfig.VOLUME.SPIKE_MULTIPLIER,
+            volumeCrash: currentVolume < avgVolume * AnalysisConfig.VOLUME.CRASH_MULTIPLIER
         };
     }
 };
@@ -886,142 +564,42 @@ const PatternDetector = {
 
 // Enhanced Indicator Analysis Module
 const IndicatorAnalyzer = {
-    analyzeMACD: (macdData, currentPrice = 1, timeframe = '1h') => {
+    analyzeMACD: (macdData, currentPrice = 1) => {
         const emptyResult = {
+            isBuilding: false,
+            isStrongBuilding: false,
             isAboveZero: false,
             isBelowZero: false,
-            macdLineAboveSignal: false,
-            macdLineBelowSignal: false,
-            zeroCross: "NONE",
-            signalCross: "NONE",
-            strength: "NEUTRAL",
-            divergence: "NONE",
-            histogramMomentum: 0,
-            normalizedHistogram: 0,  // As percentage of price
-            _meta: {
-                thresholdsUsed: {},
-                valuesNormalized: {}
-            }
+            isFalling: false,
+            isStrongFalling: false
         };
-    
-        // Validate input
-        if (!macdData?.histogram?.length || !macdData?.MACD?.length || !macdData?.signal?.length) {
-            return emptyResult;
-        }
-    
-        const hist = macdData.histogram;
-        const macdLine = macdData.MACD;
-        const signalLine = macdData.signal;
+
+        if (!macdData?.histogram?.length) return emptyResult;
         
-        // Universal threshold calculation (works for any asset price)
-        const getDynamicThreshold = (baseConfigValue) => {
-            // For assets under $1, use fixed value, otherwise percentage
-            return currentPrice < 1 ? 
-                baseConfigValue * 0.1 :  // For very low-priced assets
-                currentPrice * baseConfigValue;
-        };
-    
-        // Get base config values
-        const baseConfig = {
-            significant: TimeframeUtils.getIndicatorConfig('MACD', 'SIGNIFICANT_HISTOGRAM', timeframe),
-            strong: TimeframeUtils.getIndicatorConfig('MACD', 'STRONG_HISTOGRAM', timeframe),
-            extreme: 0.001  // 0.1% of price cap for any asset
-        };
-    
-        // Calculate dynamic thresholds
-        const thresholds = {
-            significant: Math.min(
-                getDynamicThreshold(baseConfig.significant),
-                currentPrice * baseConfig.extreme
-            ),
-            strong: Math.min(
-                getDynamicThreshold(baseConfig.strong),
-                currentPrice * baseConfig.extreme
-            )
-        };
-    
-        // Current values
-        const lastHist = hist[hist.length - 1];
-        const lastMacd = macdLine[macdLine.length - 1];
-        const lastSignal = signalLine[signalLine.length - 1];
-    
-        // Normalized values (as percentage of price)
-        const normalize = (value) => currentPrice > 0 ? (value / currentPrice) * 100 : 0;
-        const normalized = {
-            histogram: normalize(lastHist),
-            macdLine: normalize(lastMacd),
-            signalLine: normalize(lastSignal)
-        };
-    
-        // Historical values (3-period lookback)
-        const prevHist = hist.length > 1 ? hist[hist.length - 2] : lastHist;
-        const prevMacd = macdLine.length > 1 ? macdLine[macdLine.length - 2] : lastMacd;
-        const prevSignal = signalLine.length > 1 ? signalLine[signalLine.length - 2] : lastSignal;
-        const prev2Hist = hist.length > 2 ? hist[hist.length - 3] : prevHist;
-    
-        // Crossovers
-        const crossovers = {
-            zero: {
-                bullish: prevMacd <= 0 && lastMacd > 0,
-                bearish: prevMacd >= 0 && lastMacd < 0
-            },
-            signal: {
-                bullish: !(prevMacd > prevSignal) && (lastMacd > lastSignal),
-                bearish: !(prevMacd < prevSignal) && (lastMacd < lastSignal)
-            }
-        };
-    
-        // Strength calculation (using normalized values)
-        let strength = "NEUTRAL";
-        const absNormHist = Math.abs(normalized.histogram);
-        if (absNormHist > normalize(thresholds.strong)) strength = "STRONG";
-        else if (absNormHist > normalize(thresholds.significant)) strength = "MODERATE";
-    
-        // Divergence detection (works for any price range)
-        const getDivergence = () => {
-            const priceTrend = currentPrice > prevMacd ? "UP" : "DOWN";
-            const macdTrend = lastMacd > prevMacd ? "UP" : "DOWN";
-            
-            if (priceTrend === "DOWN" && macdTrend === "UP") return "BULLISH_REGULAR";
-            if (priceTrend === "UP" && macdTrend === "DOWN") return "BEARISH_REGULAR";
-            if (priceTrend === "UP" && macdTrend === "UP" && lastHist < prevHist) return "BEARISH_HIDDEN";
-            if (priceTrend === "DOWN" && macdTrend === "DOWN" && lastHist > prevHist) return "BULLISH_HIDDEN";
-            return "NONE";
-        };
-    
+        const hist = macdData.histogram;
+        const last = hist[hist.length - 1];
+        const prev = hist[hist.length - 2];
+        const prev2 = hist.length > 2 ? hist[hist.length - 3] : 0;
+        const prev3 = hist.length > 3 ? hist[hist.length - 4] : 0;
+        
         return {
-            // Core signals
-            isAboveZero: lastHist > 0,
-            isBelowZero: lastHist < 0,
-            macdLineAboveSignal: lastMacd > lastSignal,
-            macdLineBelowSignal: lastMacd < lastSignal,
-            zeroCross: crossovers.zero.bullish ? "BULLISH" : 
-                     crossovers.zero.bearish ? "BEARISH" : "NONE",
-            signalCross: crossovers.signal.bullish ? "BULLISH" : 
-                       crossovers.signal.bearish ? "BEARISH" : "NONE",
-            strength,
-            divergence: getDivergence(),
-            histogramMomentum: lastHist - prevHist,
-            normalizedHistogram: normalized.histogram,
-            
-            // Debug/metadata
-            _meta: {
-                thresholdsUsed: {
-                    significant: thresholds.significant,
-                    strong: thresholds.strong,
-                    normalized: {
-                        significant: normalize(thresholds.significant),
-                        strong: normalize(thresholds.strong)
-                    }
-                },
-                valuesNormalized: normalized,
-                price: currentPrice,
-                timeframe: timeframe
-            }
+            isBuilding: hist.length > 2 && 
+                last > prev && 
+                prev > prev2 &&
+                Math.abs(last) > (AnalysisConfig.INDICATORS.MACD.SIGNIFICANT_HISTOGRAM * currentPrice),
+            isStrongBuilding: hist.length > 3 && 
+                last > prev && 
+                prev > prev2 && 
+                prev2 > prev3 &&
+                Math.abs(last) > (AnalysisConfig.INDICATORS.MACD.STRONG_HISTOGRAM * currentPrice),
+            isAboveZero: last > 0,
+            isBelowZero: last < 0,
+            isFalling: last < prev,
+            isStrongFalling: hist.length > 2 && last < prev && prev < prev2
         };
     },
 
-    analyzeStochRSI: (stochRsiData, timeframe = '1h') => {
+    analyzeStochRSI: (stochRsiData) => {
         const emptyResult = {
             isTurningUp: false,
             isTurningDown: false,
@@ -1036,78 +614,58 @@ const IndicatorAnalyzer = {
         const last = stochRsiData[stochRsiData.length - 1];
         const prev = stochRsiData.length > 1 ? stochRsiData[stochRsiData.length - 2] : { k: 0 };
         
-        const oversold = TimeframeUtils.getIndicatorConfig('STOCH_RSI', 'OVERSOLD', timeframe);
-        const overbought = TimeframeUtils.getIndicatorConfig('STOCH_RSI', 'OVERBOUGHT', timeframe);
-        
         return {
             isTurningUp: last.k > prev.k,
             isTurningDown: last.k < prev.k,
-            isOverbought: last.k > overbought,
-            isOversold: last.k < oversold,
+            isOverbought: last.k > AnalysisConfig.INDICATORS.STOCH_RSI.OVERBOUGHT,
+            isOversold: last.k < AnalysisConfig.INDICATORS.STOCH_RSI.OVERSOLD,
             bullishDivergence: stochRsiData.length > 5 && 
                 last.k > prev.k && 
-                stochRsiData.slice(-5).some(p => p.k < oversold),
+                stochRsiData.slice(-5).some(p => p.k < AnalysisConfig.INDICATORS.RSI.OVERSOLD),
             bearishDivergence: stochRsiData.length > 5 && 
                 last.k < prev.k && 
-                stochRsiData.slice(-5).some(p => p.k > overbought)
+                stochRsiData.slice(-5).some(p => p.k > AnalysisConfig.INDICATORS.RSI.OVERBOUGHT)
         };
     },
 
-    analyzeAO: (aoData, timeframe = '1h') => {
+    analyzeAO: (aoData) => {
         const emptyResult = {
             isBuilding: false,
             isStrongBuilding: false,
             isFalling: false,
             isStrongFalling: false,
             isAboveZero: false,
-            isBelowZero: false,
-            strength: "NEUTRAL",
-            currentValue: 0,  // Properly named for AO
+            isBelowZero: false
         };
 
         if (!aoData?.length) return emptyResult;
         
         const last = aoData[aoData.length - 1];
-        const prev = aoData.length > 1 ? aoData[aoData.length - 2] : last;
-        const prev2 = aoData.length > 2 ? aoData[aoData.length - 3] : prev;
-        const prev3 = aoData.length > 3 ? aoData[aoData.length - 4] : prev2;
+        const prev = aoData.length > 1 ? aoData[aoData.length - 2] : 0;
+        const prev2 = aoData.length > 2 ? aoData[aoData.length - 3] : 0;
+        const prev3 = aoData.length > 3 ? aoData[aoData.length - 4] : 0;
         
-        // Get configured threshold
-        const significantValue = TimeframeUtils.getIndicatorConfig('AO', 'SIGNIFICANT_VALUE', timeframe);
-        
-        // Determine strength based on significantValue
-        let strength = "NEUTRAL";
-        const absValue = Math.abs(last);
-        if (absValue > significantValue * 1.5) {
-            strength = "STRONG";
-        } else if (absValue > significantValue) {
-            strength = "MODERATE";
-        }
-
-        // Check for zero crosses
-        let zeroCross = "NONE";
-        if (prev <= 0 && last > 0) zeroCross = "BULLISH";
-        if (prev >= 0 && last < 0) zeroCross = "BEARISH";
-
         return {
-            // Trend conditions
-            isBuilding: aoData.length > 2 && last > prev && prev > prev2,
-            isStrongBuilding: aoData.length > 3 && last > prev && prev > prev2 && prev2 > prev3,
-            isFalling: aoData.length > 2 && last < prev && prev < prev2,
-            isStrongFalling: aoData.length > 3 && last < prev && prev < prev2 && prev2 < prev3,
-            
-            // Position relative to zero line
+            isBuilding: aoData.length > 2 && 
+                last > prev && 
+                prev > prev2,
+            isStrongBuilding: aoData.length > 3 && 
+                last > prev && 
+                prev > prev2 &&
+                prev2 > prev3,
+            isFalling: aoData.length > 2 && 
+                last < prev && 
+                prev < prev2,
+            isStrongFalling: aoData.length > 3 && 
+                last < prev && 
+                prev < prev2 &&
+                prev2 < prev3,
             isAboveZero: last > 0,
-            isBelowZero: last < 0,
-            
-            // Strength and current value
-            strength,
-            currentValue: last,  // Properly named AO value
-            
+            isBelowZero: last < 0
         };
     },
 
-    analyzeRSI: (rsiData, timeframe = '1h', thresholds = {}) => {
+    analyzeRSI: (rsiData, thresholds = {}) => {
         const emptyResult = {
             isOversold: false,
             isOverbought: false,
@@ -1116,202 +674,60 @@ const IndicatorAnalyzer = {
             isFalling: false,
             isStrongFalling: false,
             bullishDivergence: false,
-            bearishDivergence: false,
-            strength: "NEUTRAL",
-            zone: "NEUTRAL",
+            bearishDivergence: false
         };
 
         if (!rsiData?.length) return emptyResult;
         
         const last = rsiData[rsiData.length - 1];
-        const prev = rsiData.length > 1 ? rsiData[rsiData.length - 2] : last;
-        const prev2 = rsiData.length > 2 ? rsiData[rsiData.length - 3] : prev;
+        const prev = rsiData.length > 1 ? rsiData[rsiData.length - 2] : 0;
+        const prev2 = rsiData.length > 2 ? rsiData[rsiData.length - 3] : 0;
         
-        // Get all configured thresholds
-        const oversold = thresholds.RSI_OVERSOLD || 
-                       TimeframeUtils.getIndicatorConfig('RSI', 'OVERSOLD', timeframe);
-        const overbought = thresholds.RSI_OVERBOUGHT || 
-                         TimeframeUtils.getIndicatorConfig('RSI', 'OVERBOUGHT', timeframe);
-        const strongOversold = TimeframeUtils.getIndicatorConfig('RSI', 'STRONG_OVERSOLD', timeframe);
-        const strongOverbought = TimeframeUtils.getIndicatorConfig('RSI', 'STRONG_OVERBOUGHT', timeframe);
-        const rsiStrengthThreshold = AnalysisConfig.SCORING.RSI_STRENGTH_THRESHOLD;
-
-        // Determine strength and zone
-        let strength = "NEUTRAL";
-        let zone = "NEUTRAL";
-        
-        if (last < strongOversold) {
-            zone = "STRONG_OVERSOLD";
-            strength = "EXTREME";
-        } else if (last < oversold) {
-            zone = "OVERSOLD";
-            strength = "STRONG";
-        } else if (last > strongOverbought) {
-            zone = "STRONG_OVERBOUGHT";
-            strength = "EXTREME";
-        } else if (last > overbought) {
-            zone = "OVERBOUGHT";
-            strength = "STRONG";
-        }
-
-        // Calculate momentum characteristics
-        const isRising = last > prev;
-        const isFalling = last < prev;
-        const strongRising = isRising && (last - prev) > rsiStrengthThreshold && 
-                           (prev - prev2) > rsiStrengthThreshold;
-        const strongFalling = isFalling && (prev - last) > rsiStrengthThreshold && 
-                            (prev2 - prev) > rsiStrengthThreshold;
-
         return {
-            isOversold: last < oversold,
-            isOverbought: last > overbought,
-            isRising,
-            isStrongRising: strongRising,
-            isFalling,
-            isStrongFalling: strongFalling,
+            isOversold: last < (thresholds.RSI_OVERSOLD || AnalysisConfig.INDICATORS.RSI.OVERSOLD),
+            isOverbought: last > (thresholds.RSI_OVERBOUGHT || AnalysisConfig.INDICATORS.RSI.OVERBOUGHT),
+            isRising: last > prev,
+            isStrongRising: rsiData.length > 2 && last > (prev + 2) && prev > (prev2 + 2),
+            isFalling: last < prev,
+            isStrongFalling: rsiData.length > 2 && last < (prev - 2) && prev < (prev2 - 2),
             bullishDivergence: rsiData.length > 5 && 
-                isRising && 
-                rsiData.slice(-5).some(p => p < oversold),
+                last > prev && 
+                rsiData.slice(-5).some(p => p < AnalysisConfig.INDICATORS.RSI.OVERSOLD),
             bearishDivergence: rsiData.length > 5 && 
-                isFalling && 
-                rsiData.slice(-5).some(p => p > overbought),
-            strength,
-            zone,
+                last < prev && 
+                rsiData.slice(-5).some(p => p > AnalysisConfig.INDICATORS.RSI.OVERBOUGHT)
         };
     },
 
-    analyzeADX: (adxData, timeframe = '1h') => {
+    analyzeMovingAverages: (maData) => {
         const emptyResult = {
-            trendStrength: "NO_TREND",
-            bullishStrength: false,
-            bearishStrength: false,
-            trendDirection: "NEUTRAL",
-            pdiAboveMdi: false,
-            mdiAbovePdi: false,
-            increasingADX: false,
-            decreasingADX: false
-        };
-    
-        if (!adxData?.length) return emptyResult;
-        
-        const last = adxData[0];
-        const prev = adxData[1] || last;
-        
-        const veryStrong = TimeframeUtils.getIndicatorConfig('ADX', 'TREND_THRESHOLDS.VERY_STRONG', timeframe);
-        const strong = TimeframeUtils.getIndicatorConfig('ADX', 'TREND_THRESHOLDS.STRONG', timeframe);
-        const moderate = TimeframeUtils.getIndicatorConfig('ADX', 'TREND_THRESHOLDS.MODERATE', timeframe);
-        const dirThreshold = TimeframeUtils.getIndicatorConfig('ADX', 'DIRECTIONAL_THRESHOLD', timeframe);
-    
-        return {
-            trendStrength: last.adx > veryStrong ? "VERY_STRONG" : 
-                          last.adx > strong ? "STRONG" : 
-                          last.adx > moderate ? "MODERATE" : "WEAK",
-            bullishStrength: last.pdi > dirThreshold && last.pdi > last.mdi,
-            bearishStrength: last.mdi > dirThreshold && last.mdi > last.pdi,
-            trendDirection: last.pdi > last.mdi ? "BULLISH" : 
-                          last.mdi > last.pdi ? "BEARISH" : "NEUTRAL",
-            pdiAboveMdi: last.pdi > last.mdi,
-            mdiAbovePdi: last.mdi > last.pdi,
-            increasingADX: last.adx > prev.adx,
-            decreasingADX: last.adx < prev.adx
-        };
-    },
-
-    analyzeATR: (atrData, timeframe = '1h') => {
-        const emptyResult = {
-            currentValue: 0,
-            isIncreasing: false,
-            isDecreasing: false,
-            volatilityLevel: "LOW"
+            goldenCross: false,
+            deathCross: false,
+            priceAbove50: false,
+            priceBelow50: false,
+            priceAbove200: false,
+            priceBelow200: false
         };
 
-        if (!atrData?.length) return emptyResult;
+        if (!maData?.ma50?.length || !maData?.ma200?.length) return emptyResult;
         
-        const last = atrData[0];
-        const prev = atrData[1] || last;
-        const prev2 = atrData[2] || prev;
+        const ma50 = maData.ma50;
+        const ma200 = maData.ma200;
+        
+        const last50 = ma50[ma50.length - 1];
+        const prev50 = ma50.length > 1 ? ma50[ma50.length - 2] : 0;
+        const last200 = ma200[ma200.length - 1];
+        const prev200 = ma200.length > 1 ? ma200[ma200.length - 2] : 0;
         
         return {
-            currentValue: last,
-            isIncreasing: last > prev && prev > prev2,
-            isDecreasing: last < prev && prev < prev2,
-            volatilityLevel: last > (prev * AnalysisConfig.INDICATORS.ATR.VOLATILITY_MULTIPLIERS.HIGH) ? "HIGH" : 
-                          last > (prev * AnalysisConfig.INDICATORS.ATR.VOLATILITY_MULTIPLIERS.MEDIUM) ? "MEDIUM" : "LOW"
+            goldenCross: prev50 < prev200 && last50 > last200,
+            deathCross: prev50 > prev200 && last50 < last200,
+            priceAbove50: maData.price > last50,
+            priceBelow50: maData.price < last50,
+            priceAbove200: maData.price > last200,
+            priceBelow200: maData.price < last200
         };
-    },
-
-    analyzeEMA: (emaData, currentPrice, timeframe = '1h') => {
-        const emptyResult = {
-            priceAboveEMA: false,
-            priceBelowEMA: false,
-            emaSlope: 0,
-            emaTrend: "NEUTRAL",
-            distancePercent: 0,
-            isSignificantAbove: false,
-            isSignificantBelow: false,
-            significanceLevel: "NONE",
-            emaValue: 0,
-            priceEmaRatio: 1,
-        };
-
-        // Input validation
-        if (!emaData?.length || currentPrice === undefined || currentPrice <= 0) {
-            return emptyResult;
-        }
-
-        const timeframeType = TimeframeUtils.getTimeframeType(timeframe);
-        
-        // Get all configured values
-        const significantDistance = TimeframeUtils.getIndicatorConfig('EMA', 'SIGNIFICANT_DISTANCE', timeframe);
-        const distanceThreshold = TimeframeUtils.getIndicatorConfig('EMA', 'DISTANCE_THRESHOLD', timeframe);
-        const lastEMA = emaData[0];
-        const prevEMA = emaData[1] || lastEMA;
-        const prev2EMA = emaData[2] || prevEMA;
-
-        // Calculate core metrics
-        const distancePercent = ((currentPrice - lastEMA) / lastEMA) * 100;
-        const priceEmaRatio = currentPrice / lastEMA;
-        const slope = lastEMA - prevEMA;
-        const prevSlope = prevEMA - prev2EMA;
-
-        // Determine EMA trend
-        let emaTrend;
-        if (slope > 0 && prevSlope > 0) {
-            emaTrend = "STRONG_UP";
-        } else if (slope > 0) {
-            emaTrend = "UP";
-        } else if (slope < 0 && prevSlope < 0) {
-            emaTrend = "STRONG_DOWN";
-        } else if (slope < 0) {
-            emaTrend = "DOWN";
-        } else {
-            emaTrend = "NEUTRAL";
-        }
-
-        // Determine significance levels
-        const isSignificantAbove = distancePercent > distanceThreshold;
-        const isSignificantBelow = distancePercent < -distanceThreshold;
-        
-        let significanceLevel = "NONE";
-        if (Math.abs(distancePercent) > significantDistance * 1.5) {
-            significanceLevel = "STRONG";
-        } else if (Math.abs(distancePercent) > significantDistance) {
-            significanceLevel = "MODERATE";
-        }
-
-        return {
-            priceAboveEMA: currentPrice > lastEMA,
-            priceBelowEMA: currentPrice < lastEMA,
-            emaSlope: parseFloat(slope.toFixed(6)),
-            emaTrend,
-            distancePercent: parseFloat(distancePercent.toFixed(2)),
-            isSignificantAbove,
-            isSignificantBelow,
-            significanceLevel,
-            emaValue: lastEMA,
-            priceEmaRatio: parseFloat(priceEmaRatio.toFixed(4)),
-        };
-    },
+    }
 };
 
 // Enhanced Main Analysis Class
@@ -1417,7 +833,7 @@ class MarketAnalyzer {
         };
     }
 
-    static shouldBuyOrSell(indicators, candles, analysisWindow, timeframe = '1h') {
+    static shouldBuyOrSell(indicators, candles, analysisWindow) {
         if (!analysisWindow) throw new Error("analysisWindow parameter required");
         
         const emptyResult = {
@@ -1451,27 +867,24 @@ class MarketAnalyzer {
 
         const volatility = (IndicatorUtils.extractNumber(lastCandle[2]) - IndicatorUtils.extractNumber(lastCandle[3])) / 
             Math.max(IndicatorUtils.extractNumber(lastCandle[1]), 0.0001);
-        
-        // Get timeframe-specific thresholds
-        const oversold = TimeframeUtils.getIndicatorConfig('RSI', 'OVERSOLD', timeframe);
-        const overbought = TimeframeUtils.getIndicatorConfig('RSI', 'OVERBOUGHT', timeframe);
-        const volatileOversold = TimeframeUtils.getIndicatorConfig('RSI', 'VOLATILE_ADJUSTMENT.OVERSOLD', timeframe);
-        const volatileOverbought = TimeframeUtils.getIndicatorConfig('RSI', 'VOLATILE_ADJUSTMENT.OVERBOUGHT', timeframe);
-        
         const thresholds = { 
             RSI_OVERBOUGHT: volatility > AnalysisConfig.PRICE.SIGNIFICANT_CHANGE ? 
-                volatileOverbought : overbought,
+                AnalysisConfig.INDICATORS.RSI.VOLATILE_ADJUSTMENT.OVERBOUGHT : 
+                AnalysisConfig.INDICATORS.RSI.OVERBOUGHT,
             RSI_OVERSOLD: volatility > AnalysisConfig.PRICE.SIGNIFICANT_CHANGE ? 
-                volatileOversold : oversold
+                AnalysisConfig.INDICATORS.RSI.VOLATILE_ADJUSTMENT.OVERSOLD : 
+                AnalysisConfig.INDICATORS.RSI.OVERSOLD
         };
 
-        const macdAnalysis = IndicatorAnalyzer.analyzeMACD(indicators?.macd, currentPrice, timeframe);
-        const stochRsiAnalysis = IndicatorAnalyzer.analyzeStochRSI(indicators?.stoch_rsi, timeframe);
-        const aoAnalysis = IndicatorAnalyzer.analyzeAO(indicators?.ao, timeframe);
-        const rsiAnalysis = IndicatorAnalyzer.analyzeRSI(indicators?.rsi, timeframe, thresholds);
-        const adxAnalysis = IndicatorAnalyzer.analyzeADX(indicators?.adx, timeframe);
-        const atrAnalysis = IndicatorAnalyzer.analyzeATR(indicators?.atr, timeframe);
-        const emaAnalysis = IndicatorAnalyzer.analyzeEMA(indicators?.ema, currentPrice, timeframe);
+        const macdAnalysis = IndicatorAnalyzer.analyzeMACD(indicators?.macd, currentPrice);
+        const stochRsiAnalysis = IndicatorAnalyzer.analyzeStochRSI(indicators?.stoch_rsi);
+        const aoAnalysis = IndicatorAnalyzer.analyzeAO(indicators?.ao);
+        const rsiAnalysis = IndicatorAnalyzer.analyzeRSI(indicators?.rsi, thresholds);
+        const maAnalysis = IndicatorAnalyzer.analyzeMovingAverages({
+            ma50: indicators?.ma50 || [],
+            ma200: indicators?.ma200 || [],
+            price: currentPrice
+        });
 
         const prices = candles.map(c => c[4]);
         const volumes = candles.map(c => c[5]);
@@ -1489,9 +902,7 @@ class MarketAnalyzer {
             stochRsiAnalysis,
             aoAnalysis,
             rsiAnalysis,
-            adxAnalysis,
-            atrAnalysis,
-            emaAnalysis,
+            maAnalysis,
             advancedPatterns,
             engulfingPatterns,
             gaps,
@@ -1516,6 +927,8 @@ class MarketAnalyzer {
                     gapUp: gaps.gapUp,
                     gapDown: gaps.gapDown,
                     volumeDivergence,
+                    goldenCross: maAnalysis.goldenCross,
+                    deathCross: maAnalysis.deathCross,
                     supportBreak,
                     resistanceBreak
                 },
@@ -1535,9 +948,7 @@ class MarketAnalyzer {
             stochRsiAnalysis,
             aoAnalysis,
             rsiAnalysis,
-            adxAnalysis,
-            atrAnalysis,
-            emaAnalysis,
+            maAnalysis,
             advancedPatterns,
             engulfingPatterns,
             gaps,
@@ -1549,14 +960,10 @@ class MarketAnalyzer {
         } = analysis;
 
         const INDICATOR_WEIGHTS = {
-            // MACD Weights
-            macdZeroLineBullish: 3.0,      // Strongest weight for zero-line crossover
-            macdZeroLineBearish: 3.0,
-            macdSignalLineBullish: 2.0,    // Regular weight for signal line crossover
-            macdSignalLineBearish: 2.0,
-            macdExtremeBullish: 1.5,       // Additional confirmation
-            macdExtremeBearish: 1.5,
-
+            macdBuilding: 1.5,
+            macdStrongBuilding: 2.0,
+            macdFalling: 1.8,
+            macdStrongFalling: 2.2,
             stochRSITurning: 1.2,
             stochRSIBullishDivergence: 2.5,
             rsiOversold: 1.8,
@@ -1574,6 +981,7 @@ class MarketAnalyzer {
             earlyMomentum: 3.0,
             goodPullback: 2.5,
             acceleratingRoc: 2.0,
+            goldenCross: 2.5,
             morningStar: 2.0,
             rsiOverbought: 2.5,
             rsiFalling: 1.5,
@@ -1590,26 +998,12 @@ class MarketAnalyzer {
             threeBlackCrows: 2.5,
             eveningStar: 2.0,
             volumeDivergence: 2.5,
+            deathCross: 3.0,
             earlyWeakness: 3.0,
             deceleratingRoc: 2.0,
             volumeCrash: 1.8,
             supportBreak: 2.0,
-            resistanceBreak: 2.0,
-            adxVeryStrong: 2.5,
-            adxStrong: 2.0,
-            adxModerate: 1.5,
-            adxBullish: 1.8,
-            adxBearish: 2.0,
-            adxIncreasing: 1.3,
-            atrIncreasing: 1.2,
-            atrHighVolatility: 1.5,
-            priceAboveEMA: 1.3,
-            priceBelowEMA: 1.5,
-            emaStrongUp: 2.0,
-            emaUp: 1.5,
-            emaStrongDown: 2.0,
-            emaDown: 1.5,
-            emaDistance: 1.2
+            resistanceBreak: 2.0
         };
 
         let buyScore = 0;
@@ -1649,14 +1043,10 @@ class MarketAnalyzer {
         }
 
         // MACD factors
-        if (macdAnalysis?.zeroCross === "BULLISH") buyScore += INDICATOR_WEIGHTS.macdZeroLineBullish;
-        if (macdAnalysis?.zeroCross === "BEARISH") sellScore += INDICATOR_WEIGHTS.macdZeroLineBearish;        
-        if (macdAnalysis?.signalCross === "BULLISH") buyScore += INDICATOR_WEIGHTS.macdSignalLineBullish;  
-        if (macdAnalysis?.signalCross === "BEARISH") sellScore += INDICATOR_WEIGHTS.macdSignalLineBearish;
-        if (macdAnalysis?.strength === "STRONG") {
-            if (macdAnalysis.isAboveZero) buyScore += INDICATOR_WEIGHTS.macdExtremeBullish;
-            if (macdAnalysis.isBelowZero) sellScore += INDICATOR_WEIGHTS.macdExtremeBearish;
-        }
+        if (macdAnalysis?.isBuilding) buyScore += INDICATOR_WEIGHTS.macdBuilding;
+        if (macdAnalysis?.isStrongBuilding) buyScore += INDICATOR_WEIGHTS.macdStrongBuilding;
+        if (macdAnalysis?.isFalling) sellScore += INDICATOR_WEIGHTS.macdFalling;
+        if (macdAnalysis?.isStrongFalling) sellScore += INDICATOR_WEIGHTS.macdStrongFalling;
 
         // Stochastic RSI factors
         if (stochRsiAnalysis?.isTurningUp) buyScore += INDICATOR_WEIGHTS.stochRSITurning;
@@ -1682,45 +1072,6 @@ class MarketAnalyzer {
         if (aoAnalysis?.isFalling) sellScore += INDICATOR_WEIGHTS.aoFalling;
         if (aoAnalysis?.isStrongFalling) sellScore += INDICATOR_WEIGHTS.aoStrongFalling;
 
-        // ADX factors
-        if (adxAnalysis?.trendStrength === "VERY_STRONG") {
-            if (adxAnalysis?.pdiAboveMdi) buyScore += INDICATOR_WEIGHTS.adxVeryStrong;
-            if (adxAnalysis?.mdiAbovePdi) sellScore += INDICATOR_WEIGHTS.adxVeryStrong;
-        } else if (adxAnalysis?.trendStrength === "STRONG") {
-            if (adxAnalysis?.pdiAboveMdi) buyScore += INDICATOR_WEIGHTS.adxStrong;
-            if (adxAnalysis?.mdiAbovePdi) sellScore += INDICATOR_WEIGHTS.adxStrong;
-        } else if (adxAnalysis?.trendStrength === "MODERATE") {
-            if (adxAnalysis?.pdiAboveMdi) buyScore += INDICATOR_WEIGHTS.adxModerate;
-            if (adxAnalysis?.mdiAbovePdi) sellScore += INDICATOR_WEIGHTS.adxModerate;
-        }
-        
-        if (adxAnalysis?.bullishStrength) buyScore += INDICATOR_WEIGHTS.adxBullish;
-        if (adxAnalysis?.bearishStrength) sellScore += INDICATOR_WEIGHTS.adxBearish;
-        if (adxAnalysis?.increasingADX && adxAnalysis?.pdiAboveMdi) buyScore += INDICATOR_WEIGHTS.adxIncreasing;
-        if (adxAnalysis?.increasingADX && adxAnalysis?.mdiAbovePdi) sellScore += INDICATOR_WEIGHTS.adxIncreasing;
-
-        // ATR factors
-        if (atrAnalysis?.isIncreasing) {
-            if (candleAnalysis?.priceTrend === "BULLISH") buyScore += INDICATOR_WEIGHTS.atrIncreasing;
-            if (candleAnalysis?.priceTrend === "BEARISH") sellScore += INDICATOR_WEIGHTS.atrIncreasing;
-        }
-        if (atrAnalysis?.volatilityLevel === "HIGH") {
-            buyScore += INDICATOR_WEIGHTS.atrHighVolatility * 0.5;
-            sellScore += INDICATOR_WEIGHTS.atrHighVolatility * 0.5;
-        }
-
-        // EMA factors
-        if (emaAnalysis?.priceAboveEMA) buyScore += INDICATOR_WEIGHTS.priceAboveEMA;
-        if (emaAnalysis?.priceBelowEMA) sellScore += INDICATOR_WEIGHTS.priceBelowEMA;
-        
-        if (emaAnalysis?.emaTrend === "STRONG_UP") buyScore += INDICATOR_WEIGHTS.emaStrongUp;
-        if (emaAnalysis?.emaTrend === "UP") buyScore += INDICATOR_WEIGHTS.emaUp;
-        if (emaAnalysis?.emaTrend === "STRONG_DOWN") sellScore += INDICATOR_WEIGHTS.emaStrongDown;
-        if (emaAnalysis?.emaTrend === "DOWN") sellScore += INDICATOR_WEIGHTS.emaDown;
-        
-        if (emaAnalysis?.distancePercent > AnalysisConfig.INDICATORS.EMA.DISTANCE_THRESHOLD) buyScore += INDICATOR_WEIGHTS.emaDistance;
-        if (emaAnalysis?.distancePercent < -AnalysisConfig.INDICATORS.EMA.DISTANCE_THRESHOLD) sellScore += INDICATOR_WEIGHTS.emaDistance;
-
         // Price action factors
         if (candleAnalysis?.potentialMove === "STRONG_ACCELERATION") buyScore += INDICATOR_WEIGHTS.priceAcceleration * 1.5;
         else if (candleAnalysis?.potentialMove === "ACCELERATION") buyScore += INDICATOR_WEIGHTS.priceAcceleration;
@@ -1741,6 +1092,10 @@ class MarketAnalyzer {
         if (advancedPatterns?.isThreeBlackCrows) sellScore += INDICATOR_WEIGHTS.threeBlackCrows;
         if (advancedPatterns?.isMorningStar) buyScore += INDICATOR_WEIGHTS.morningStar;
         if (advancedPatterns?.isEveningStar) sellScore += INDICATOR_WEIGHTS.eveningStar;
+
+        // Moving average factors
+        if (maAnalysis?.goldenCross) buyScore += INDICATOR_WEIGHTS.goldenCross;
+        if (maAnalysis?.deathCross) sellScore += INDICATOR_WEIGHTS.deathCross;
 
         // Support/Resistance factors
         if (supportBreak) sellScore += INDICATOR_WEIGHTS.supportBreak;
@@ -1769,41 +1124,39 @@ class MarketAnalyzer {
             AnalysisConfig.SCORING.EARLY_DETECTION_THRESHOLDS[priceTrend] :
             AnalysisConfig.SCORING.BASE_THRESHOLDS[priceTrend];
         
-        const oppose = AnalysisConfig.SCORING.OPPOSING_SIGNAL_THRESHOLDS;
-        
         // Handle conflicting strong signals
         if (buyScore >= thresholds.strongBuy && sellScore >= thresholds.strongSell) {
             return "CONFLICT";
         }
         
         if (earlyTrend?.earlyMomentum || earlyTrend?.goodPullback) {
-            if (buyScore >= thresholds.strongBuy && sellScore < oppose.EARLY_STRONG) {
+            if (buyScore >= thresholds.strongBuy && sellScore < 3) {
                 return "EARLY_STRONG_BUY";
             }
-            if (buyScore >= thresholds.buy && sellScore < oppose.EARLY_WEAK) {
+            if (buyScore >= thresholds.buy && sellScore < 2) {
                 return "EARLY_BUY";
             }
         }
-    
+
         if (earlyTrend?.earlyWeakness) {
-            if (sellScore >= thresholds.strongSell && buyScore < oppose.EARLY_STRONG) {
+            if (sellScore >= thresholds.strongSell && buyScore < 3) {
                 return "EARLY_STRONG_SELL";
             }
-            if (sellScore >= thresholds.sell && buyScore < oppose.EARLY_WEAK) {
+            if (sellScore >= thresholds.sell && buyScore < 2) {
                 return "EARLY_SELL";
             }
         }
         
-        if (buyScore >= thresholds.strongBuy && sellScore < oppose.REGULAR_STRONG) {
+        if (buyScore >= thresholds.strongBuy && sellScore < 4) {
             return "STRONG_BUY";
         }
-        if (buyScore >= thresholds.buy && sellScore < oppose.REGULAR_WEAK) {
+        if (buyScore >= thresholds.buy && sellScore < 3) {
             return "BUY";
         }
-        if (sellScore >= thresholds.strongSell && buyScore < oppose.REGULAR_STRONG) {
+        if (sellScore >= thresholds.strongSell && buyScore < 4) {
             return "STRONG_SELL";
         }
-        if (sellScore >= thresholds.sell && buyScore < oppose.REGULAR_WEAK) {
+        if (sellScore >= thresholds.sell && buyScore < 3) {
             return "SELL";
         }
         
@@ -1831,15 +1184,14 @@ class MarketAnalyzer {
             const candles = allCandles[timeframe];
             const indicators = allIndicators[timeframe];
             
+            const primaryHours = parseTimeframeToHours(options.primaryTimeframe);
             const currentHours = parseTimeframeToHours(timeframe);
-            const minPoints = (currentHours >= 24) ? 1 : AnalysisConfig.MIN_DATA_POINTS.DEFAULT;
-            
             const timeframeWindow = Math.max(
-                minPoints,
-                Math.ceil(options.analysisWindow / currentHours)
+                AnalysisConfig.MIN_DATA_POINTS.DEFAULT,
+                Math.ceil((options.analysisWindow * primaryHours) / currentHours)
             );
-            
-            const result = this.shouldBuyOrSell(indicators, candles, timeframeWindow, timeframe);
+    
+            const result = this.shouldBuyOrSell(indicators, candles, timeframeWindow);
             const weight = weights[timeframe] || 1;
             
             const metrics = result.predictiveMetrics || {
@@ -1878,7 +1230,7 @@ class MarketAnalyzer {
         const sellSignals = signals.filter(s => s.signal.includes('SELL')).length;
         
         const earlyBuySignals = signals.filter(s => s.signal.includes('EARLY_BUY')).length;
-        if (earlyBuySignals >= Math.max(AnalysisConfig.SCORING.EARLY_SIGNAL_THRESHOLDS.MIN_AGREEMENT, minAgreement - 1) && normalizedBuyScore > AnalysisConfig.SCORING.EARLY_SIGNAL_THRESHOLDS.SCORE_THRESHOLD) {
+        if (earlyBuySignals >= Math.max(1, minAgreement - 1) && normalizedBuyScore > 7) {
             return {
                 consensusSignal: "EARLY_BUY",
                 signals,
@@ -1894,7 +1246,7 @@ class MarketAnalyzer {
         }
 
         const earlySellSignals = signals.filter(s => s.signal.includes('EARLY_SELL')).length;
-        if (earlySellSignals >= Math.max(AnalysisConfig.SCORING.EARLY_SIGNAL_THRESHOLDS.MIN_AGREEMENT, minAgreement - 1) && normalizedSellScore > AnalysisConfig.SCORING.EARLY_SIGNAL_THRESHOLDS.SCORE_THRESHOLD) {
+        if (earlySellSignals >= Math.max(1, minAgreement - 1) && normalizedSellScore > 7) {
             return {
                 consensusSignal: "EARLY_SELL",
                 signals,
@@ -1911,10 +1263,10 @@ class MarketAnalyzer {
         
         return {
             consensusSignal: 
-                normalizedBuyScore > AnalysisConfig.SCORING.CONSENSUS_THRESHOLDS.STRONG_BUY && buySignals >= minAgreement ? "STRONG_BUY" :
-                normalizedBuyScore > AnalysisConfig.SCORING.CONSENSUS_THRESHOLDS.BUY && buySignals >= minAgreement ? "BUY" :
-                normalizedSellScore > AnalysisConfig.SCORING.CONSENSUS_THRESHOLDS.STRONG_SELL && sellSignals >= minAgreement ? "STRONG_SELL" :
-                normalizedSellScore > AnalysisConfig.SCORING.CONSENSUS_THRESHOLDS.SELL && sellSignals >= minAgreement ? "SELL" : "HOLD",
+                normalizedBuyScore > 8 && buySignals >= minAgreement ? "STRONG_BUY" :
+                normalizedBuyScore > 6 && buySignals >= minAgreement ? "BUY" :
+                normalizedSellScore > 8 && sellSignals >= minAgreement ? "STRONG_SELL" :
+                normalizedSellScore > 6 && sellSignals >= minAgreement ? "SELL" : "HOLD",
             signals,
             normalizedBuyScore,
             normalizedSellScore,

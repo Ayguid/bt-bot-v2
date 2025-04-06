@@ -10,13 +10,14 @@ const config = {
     alertCooldown: 10 * 60 * 1000, // 10 minutes in milliseconds
     klinesInterval_1: '1h',
     klinesInterval_2: '4h',
+    primaryKlines: '1h',
     analysisWindow: 24, // 24hr trends will be returned
     //server time diffs
     shouldResynch: false,
     timeCheckInterval: 60000,
     maxTimeDifferenceMs: 1000,
     visualizationEnabled: true,  // Set to false to disable
-    visualizationPort: 9000,      // Change port if needed
+    visualizationPort: 5000,      // Change port if needed
     
 };
 
