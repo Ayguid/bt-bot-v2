@@ -1,6 +1,7 @@
 const crypto = require("crypto");
-const RateLimitedQueue = require('../classes/RateLimitedQueue');
+const RateLimitedQueue = require('./classes/RateLimitedQueue');
 const { klines, fetchMyOrders, tickerPrice, userAsset, fetchMyAccount, placeOrder, cancelOrder, cancelAndReplace, exchangeInfo, depth } = require('../utils/binance-spot');
+const { plusPercent, minusPercent, calculateProfit, timePassed, wait } = require('../utils/helpers');
 const TimeManager = require('./TimeManager');
 
 class ExchangeManager {
@@ -72,6 +73,13 @@ class ExchangeManager {
         };
     }
 
+    getDecimals(filterValue) {
+        //Remove trailing zeros and decimal point if it's only followed by zeros
+        const trimmedValue = parseFloat(filterValue).toString();
+        const parts = trimmedValue.split('.');
+        return parts[1] ? parts[1].length : 0;
+    }
+
     // New method to fetch and store exchangeInfo only once
     async fetchExchangeInfo() {
         return await this.makeQueuedReq(exchangeInfo);
@@ -87,10 +95,10 @@ class ExchangeManager {
         ]);
     }
 
-    /* async getBalances(pair) {
+    async getBalances(pair) {
         const assetKey = pair.split("_")[0];
         const stableKey = pair.split("_")[1];
-        console.log(assetKey, stableKey);
+        //console.log(assetKey, stableKey);
         const TESTNET = process.env.TESTNET == 'true';
         let baseAsset;
         let quoteAsset;
@@ -106,13 +114,59 @@ class ExchangeManager {
             baseAsset = baseAsset[0]
             quoteAsset = quoteAsset[0]
         }
-        console.log(baseAsset, quoteAsset);
+        //console.log(baseAsset, quoteAsset);
         return [
             baseAsset,
             quoteAsset
         ];
     }
- */
+
+    async placeBuyOrder(pair, currentPrice) {
+        console.log(`Placing buy order for ${pair.key}`);
+        const balances = await this.getBalances(pair.key);
+        const quoteAsset = balances[1];
+        if (quoteAsset.free < pair.orderQty) {
+            console.warn('Not enough balance to place buy order.');
+            return;
+        }
+        const filters = this.exchangeInfo.symbols.find(symbol => symbol.symbol == pair.joinedPair).filters;
+        const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
+        const qtyDecimals = this.getDecimals(filters.find(f => f.filterType === 'LOT_SIZE').stepSize);
+        
+        const buyPrice = minusPercent(pair.belowPrice, currentPrice).toFixed(priceDecimals);
+        const qty = (pair.orderQty / buyPrice).toFixed(qtyDecimals);
+        const order = await this.makeQueuedReq(placeOrder, pair.joinedPair, 'BUY', 'LIMIT', { price: buyPrice, quantity: qty, timeInForce: 'GTC', newClientOrderId: this.generateOrderId() });
+        return order;
+    }
+
+    async placeSellOrder(pair, lastOrder) {
+        console.log(`Placing sell order for ${pair.key}`);
+        const balances = await this.getBalances(pair.key);
+        const baseAsset = balances[0];
+        if (baseAsset.free <= 0) {
+            console.warn('Not enough balance to place sell order.');
+            return;
+        }
+        
+        const filters = this.exchangeInfo.symbols.find(symbol => symbol.symbol == pair.joinedPair).filters;
+        const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
+        const sellPrice = plusPercent(pair.profitMgn, lastOrder.price).toFixed(priceDecimals);
+        
+        const qty = lastOrder.executedQty;
+        const order = await this.makeQueuedReq(placeOrder, pair.joinedPair, 'SELL', 'LIMIT', { price: sellPrice, quantity: qty, timeInForce: 'GTC', newClientOrderId: this.generateOrderId() });
+        return order;
+    }
+    async cancelOrder(pair, lastOrder) {
+        const order = await this.makeQueuedReq(cancelOrder, pair.joinedPair, lastOrder.orderId);
+        return order;
+    }
+
+    async cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice, partial=false) {
+        console.log('Cancelling and Selling to current price.');
+        const qty = partial ? lastOrder.executedQty : lastOrder.origQty;
+        const order = await this.makeQueuedReq(cancelAndReplace, pair.joinedPair, 'SELL', 'LIMIT', { cancelOrderId: lastOrder.orderId, quantity: qty, price: currentPrice, timeInForce: 'GTC' });
+        return order;
+    }
 }
 
 module.exports = ExchangeManager;

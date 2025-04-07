@@ -9,303 +9,285 @@ const AnalysisConfig = {
 
     // ===== PRICE MOVEMENT THRESHOLDS =====
     PRICE: {
-        SIGNIFICANT_CHANGE: 0.05, // Increased from 0.04
-        STRONG_CHANGE: 0.15, // Increased from 0.12
-        
+        SIGNIFICANT_CHANGE: 0.035,
+        STRONG_CHANGE: 0.12,
         ACCELERATION_THRESHOLD: {
-            DEFAULT: 0.04,
+            DEFAULT: 0.035,
             HIGH_VOLATILITY: 0.06,
             LOW_VOLATILITY: 0.02
         },
-        
         DECELERATION_THRESHOLD: {
-            DEFAULT: -0.04,
-            HIGH_VOLATILITY: -0.06,
-            LOW_VOLATILITY: -0.02
+            DEFAULT: -0.05,
+            HIGH_VOLATILITY: -0.08,
+            LOW_VOLATILITY: -0.025
         },
-        
         MODERATE_ACCELERATION: 0.025,
         MODERATE_DECELERATION: -0.025,
-        GAP_PERCENTAGE: 0.01,
-        PULLBACK_MAX_DIP: 0.01
+        GAP_PERCENTAGE: 0.015,
+        PULLBACK_MAX_DIP: 0.015
     },
 
     // ===== VOLUME ANALYSIS =====
     VOLUME: {
         SPIKE_MULTIPLIER: {
-            DEFAULT: 1.4,    // 140% instead of 160%
-            HIGH_VOLATILITY: 1.7, //1.9
-            LOW_VOLATILITY: 1.4
+            DEFAULT: 2.0,
+            HIGH_VOLATILITY: 2.5,
+            LOW_VOLATILITY: 1.8
         },
-        
         CRASH_MULTIPLIER: {
-            DEFAULT: 0.55,
-            HIGH_VOLATILITY: 0.35,
-            LOW_VOLATILITY: 0.65
+            DEFAULT: 0.45,
+            HIGH_VOLATILITY: 0.25,
+            LOW_VOLATILITY: 0.55
         },
-        
-        SIGNIFICANT_INCREASE: 1.25,  // Was 1.4
-        SIGNIFICANT_DECREASE: 0.6,
-        DIVERGENCE_THRESHOLD: 0.35,
-        ENGULFING_INCREASE_REQUIRED: 35,
-        AVG_WINDOW: 12
+        SIGNIFICANT_INCREASE: 1.35,
+        SIGNIFICANT_DECREASE: 0.55,
+        DIVERGENCE_THRESHOLD: 0.25,
+        ENGULFING_INCREASE_REQUIRED: 50,
+        AVG_WINDOW: 20
     },
 
     // ===== INDICATOR THRESHOLDS =====
     INDICATORS: {
         MACD: {
             SIGNIFICANT_HISTOGRAM: {
-                DEFAULT: 0.0003,    // 0.03% of price
-                SHORT_TERM: 0.0004, // 0.04%
-                MEDIUM_TERM: 0.0003,
-                LONG_TERM: 0.0002   // 0.02%
+                DEFAULT: 0.0008,
+                SHORT_TERM: 0.001,
+                MEDIUM_TERM: 0.0009,
+                LONG_TERM: 0.0006
             },
             STRONG_HISTOGRAM: {
-                DEFAULT: 0.0005,    // 0.05%
-                SHORT_TERM: 0.0006, // 0.06%
-                MEDIUM_TERM: 0.0005,
-                LONG_TERM: 0.0004   // 0.04%
+                DEFAULT: 0.0012,
+                SHORT_TERM: 0.0015,
+                MEDIUM_TERM: 0.0013,
+                LONG_TERM: 0.001
             }
         },
-        
         RSI: {
             OVERSOLD: {
-                DEFAULT: 35,    // Was 28
-                SHORT_TERM: 23,
-                MEDIUM_TERM: 28,
-                LONG_TERM: 33
+                DEFAULT: 32,
+                SHORT_TERM: 28,
+                MEDIUM_TERM: 32,
+                LONG_TERM: 35
             },
             OVERBOUGHT: {
-                DEFAULT: 65,    // Was 73
-                SHORT_TERM: 78,
-                MEDIUM_TERM: 73,
-                LONG_TERM: 68
+                DEFAULT: 68,
+                SHORT_TERM: 72,
+                MEDIUM_TERM: 68,
+                LONG_TERM: 65
             },
             STRONG_OVERSOLD: {
-                DEFAULT: 23,
-                SHORT_TERM: 18,
-                MEDIUM_TERM: 23,
+                DEFAULT: 25,
+                SHORT_TERM: 20,
+                MEDIUM_TERM: 25,
                 LONG_TERM: 28
             },
             STRONG_OVERBOUGHT: {
-                DEFAULT: 78,
-                SHORT_TERM: 83,
-                MEDIUM_TERM: 78,
-                LONG_TERM: 73
+                DEFAULT: 75,
+                SHORT_TERM: 80,
+                MEDIUM_TERM: 75,
+                LONG_TERM: 70
             },
             VOLATILE_ADJUSTMENT: {
                 OVERSOLD: {
-                    DEFAULT: 25,
-                    SHORT_TERM: 20,
-                    MEDIUM_TERM: 25,
-                    LONG_TERM: 30
+                    DEFAULT: 22,
+                    SHORT_TERM: 18,
+                    MEDIUM_TERM: 22,
+                    LONG_TERM: 27
                 },
                 OVERBOUGHT: {
-                    DEFAULT: 80,
-                    SHORT_TERM: 85,
-                    MEDIUM_TERM: 80,
-                    LONG_TERM: 75
+                    DEFAULT: 82,
+                    SHORT_TERM: 87,
+                    MEDIUM_TERM: 82,
+                    LONG_TERM: 77
                 }
             }
         },
-        
         STOCH_RSI: {
             OVERSOLD: {
-                DEFAULT: 20,
-                SHORT_TERM: 15,
-                MEDIUM_TERM: 20,
-                LONG_TERM: 25
+                DEFAULT: 18,
+                SHORT_TERM: 13,
+                MEDIUM_TERM: 18,
+                LONG_TERM: 23
             },
             OVERBOUGHT: {
-                DEFAULT: 80,
-                SHORT_TERM: 85,
-                MEDIUM_TERM: 80,
-                LONG_TERM: 75
+                DEFAULT: 82,
+                SHORT_TERM: 87,
+                MEDIUM_TERM: 82,
+                LONG_TERM: 77
             }
         },
-        
         AO: {
             SIGNIFICANT_VALUE: {
-                DEFAULT: 0.3,
-                SHORT_TERM: 0.4,
-                MEDIUM_TERM: 0.3,
-                LONG_TERM: 0.2
+                DEFAULT: 0.4,
+                SHORT_TERM: 0.5,
+                MEDIUM_TERM: 0.4,
+                LONG_TERM: 0.3
             }
         },
-        
         ADX: {
             TREND_THRESHOLDS: {
                 VERY_STRONG: {
-                    DEFAULT: 50,
-                    SHORT_TERM: 55,
-                    MEDIUM_TERM: 50,
-                    LONG_TERM: 45
+                    DEFAULT: 45,
+                    SHORT_TERM: 50,
+                    MEDIUM_TERM: 45,
+                    LONG_TERM: 40
                 },
                 STRONG: {
-                    DEFAULT: 40,
-                    SHORT_TERM: 45,
-                    MEDIUM_TERM: 40,
-                    LONG_TERM: 35
+                    DEFAULT: 35,
+                    SHORT_TERM: 40,
+                    MEDIUM_TERM: 35,
+                    LONG_TERM: 30
                 },
                 MODERATE: {
-                    DEFAULT: 25,
-                    SHORT_TERM: 30,
-                    MEDIUM_TERM: 25,
-                    LONG_TERM: 20
+                    DEFAULT: 20,
+                    SHORT_TERM: 25,
+                    MEDIUM_TERM: 20,
+                    LONG_TERM: 15
                 },
                 WEAK: 0
             },
             DIRECTIONAL_THRESHOLD: {
-                DEFAULT: 25,
-                SHORT_TERM: 30,
-                MEDIUM_TERM: 25,
-                LONG_TERM: 20
+                DEFAULT: 20,
+                SHORT_TERM: 25,
+                MEDIUM_TERM: 20,
+                LONG_TERM: 15
             }
         },
-        
         EMA: {
             SIGNIFICANT_DISTANCE: {
-                DEFAULT: 0.02,
-                SHORT_TERM: 0.03,
-                MEDIUM_TERM: 0.02,
-                LONG_TERM: 0.015
+                DEFAULT: 0.015,
+                SHORT_TERM: 0.025,
+                MEDIUM_TERM: 0.015,
+                LONG_TERM: 0.01
             },
             DISTANCE_THRESHOLD: {
-                DEFAULT: 1.5,
-                SHORT_TERM: 2,
-                MEDIUM_TERM: 1.5,
-                LONG_TERM: 1
+                DEFAULT: 1.2,
+                SHORT_TERM: 1.7,
+                MEDIUM_TERM: 1.2,
+                LONG_TERM: 0.8
             }
         },
-        
         ATR: {
             VOLATILITY_MULTIPLIERS: {
-                HIGH: 1.5,
-                MEDIUM: 1.2
+                HIGH: 1.3,
+                MEDIUM: 1.1
             }
         }
     },
 
     // ===== PATTERN DETECTION =====
     PATTERNS: {
-        BODY_SIZE_RATIO: 0.8,
-        SMALL_BODY_RATIO: 0.2,
-        STAR_PATTERN_PRICE_CHANGE: 0.02
+        BODY_SIZE_RATIO: 0.75,
+        SMALL_BODY_RATIO: 0.15,
+        STAR_PATTERN_PRICE_CHANGE: 0.012
     },
 
     // ===== EARLY DETECTION =====
     EARLY_DETECTION: {
-        PRICE_ABOVE_AVG: 1.005,  // Was 1.01 (0.5% vs 1%)
-        VOLUME_ABOVE_AVG: 1.5,    // Was 1.8
-        PRICE_BELOW_AVG: 0.99,
+        PRICE_ABOVE_AVG: 1.005,
+        VOLUME_ABOVE_AVG: 1.3,
+        PRICE_BELOW_AVG: 0.995,
         VOLUME_BELOW_AVG: 0.5,
-        ROC_STRENGTH_THRESHOLD: 0.03
+        ROC_STRENGTH_THRESHOLD: 0.015
     },
 
     // ===== SCORING SYSTEM =====
     SCORING: {
         BASE_THRESHOLDS: {
             BULLISH: { 
-                buy: 6,
-                strongBuy: 9,
-                sell: 4,
-                strongSell: 7
+                buy: 3.5,
+                strongBuy: 6.5,
+                sell: 4.0,
+                strongSell: 7.5
             },
             BEARISH: { 
-                buy: 6,
-                strongBuy: 9,
-                sell: 4,
-                strongSell: 7
+                buy: 4.0,
+                strongBuy: 7.0,
+                sell: 4.5,
+                strongSell: 8.0
             },
             SIDEWAYS: { 
-                buy: 5,
-                strongBuy: 8,
-                sell: 5,
-                strongSell: 8
+                buy: 3.5,
+                strongBuy: 6.5,
+                sell: 4.0,
+                strongSell: 7.5
             }
         },
-        
         EARLY_DETECTION_THRESHOLDS: {
             BULLISH: { 
-                buy: 4,
-                strongBuy: 7,
-                sell: 3,
-                strongSell: 6
+                buy: 2.5,
+                strongBuy: 5.5,
+                sell: 3.5,
+                strongSell: 6.5
             },
             BEARISH: { 
-                buy: 5,
-                strongBuy: 8,
-                sell: 3,
-                strongSell: 6
+                buy: 3.5,
+                strongBuy: 6.0,
+                sell: 4.5,
+                strongSell: 7.0
             },
             SIDEWAYS: { 
-                buy: 6,
-                strongBuy: 9,
-                sell: 4,
-                strongSell: 7
+                buy: 3.0,
+                strongBuy: 5.5,
+                sell: 4.0,
+                strongSell: 6.5
             }
         },
-        
         TREND_MULTIPLIERS: {
-            BULLISH: { buy: 1.2, sell: 0.8 },  // Was buy:1.1//BULLISH: { buy: 1.1, sell: 0.9 },
-            BEARISH: { buy: 0.9, sell: 1.1 },   // Was sell:1.2//BEARISH: { buy: 0.8, sell: 1.2 },
+            BULLISH: { buy: 1.1, sell: 0.9 },
+            BEARISH: { buy: 0.9, sell: 1.1 },
             SIDEWAYS: { buy: 1.0, sell: 1.0 }
         },
-        
-        VOLUME_MULTIPLIER: 1.3,
-        
+        VOLUME_MULTIPLIER: 1.2,
         SIGNAL_MULTIPLIERS: {
-            STRONG: 1.5,
-            EARLY: 1.3,
-            WEAK: 0.8
+            STRONG: 1.4,
+            EARLY: 1.2,
+            WEAK: 0.9
         },
-        
         CONSENSUS_THRESHOLDS: {
-            STRONG_BUY: 7,  // Was 8
-            BUY: 5,          // Was 6
-            STRONG_SELL: 8,
-            SELL: 6
+            STRONG_BUY: 6.0,
+            BUY: 3.5,
+            STRONG_SELL: 6.0,
+            SELL: 3.5
         },
-        
         OPPOSING_SIGNAL_THRESHOLDS: {
             EARLY_WEAK: 2,
             EARLY_STRONG: 3,
             REGULAR_WEAK: 3,
             REGULAR_STRONG: 4
         },
-        
         EARLY_SIGNAL_THRESHOLDS: {
             MIN_AGREEMENT: 1,
-            SCORE_THRESHOLD: 7
+            SCORE_THRESHOLD: 6
         },
-        
-        RSI_STRENGTH_THRESHOLD: 2
+        RSI_STRENGTH_THRESHOLD: 1.5
     },
 
     // ===== TIMEFRAME ANALYSIS =====
     TIMEFRAMES: {
         DEFAULT_WEIGHTS: {
-            '1m': 0.5,
-            '5m': 0.7,
-            '15m': 1,
-            '1h': 1.3,
-            '4h': 1.6,
-            '1d': 2.0,
-            '1w': 2.5
+            '1m': 0.3,
+            '5m': 0.5,
+            '15m': 0.7,
+            '1h': 1,
+            '2h': 1.5,
+            '4h': 2.5,
+            '1d': 1.0,
+            '1w': 0.5
         },
-        MIN_AGREEMENT_RATIO: 0.65
+        MIN_AGREEMENT_RATIO: 0.6
     },
 
     // ===== TREND CLASSIFICATION =====
     TREND: {
-        PRICE_CHANGE_THRESHOLD: 0.1,
-        VOLUME_CHANGE_THRESHOLD: 3
+        PRICE_CHANGE_THRESHOLD: 0.08,
+        VOLUME_CHANGE_THRESHOLD: 2.5
     },
 
     // ===== TIMEFRAME CLASSIFICATION =====
     TIMEFRAME_CLASSIFICATION: {
         SHORT_TERM: ['1m', '5m', '15m', '30m'],
-        MEDIUM_TERM: ['1h', '4h', '6h', '12h'],
+        MEDIUM_TERM: ['1h', '2h','4h', '6h', '12h'],
         LONG_TERM: ['1d', '1w', '1M']
     }
 };
@@ -957,7 +939,6 @@ const IndicatorAnalyzer = {
         const prevHist = hist.length > 1 ? hist[hist.length - 2] : lastHist;
         const prevMacd = macdLine.length > 1 ? macdLine[macdLine.length - 2] : lastMacd;
         const prevSignal = signalLine.length > 1 ? signalLine[signalLine.length - 2] : lastSignal;
-        const prev2Hist = hist.length > 2 ? hist[hist.length - 3] : prevHist;
     
         // Crossovers
         const crossovers = {
@@ -1083,11 +1064,6 @@ const IndicatorAnalyzer = {
         } else if (absValue > significantValue) {
             strength = "MODERATE";
         }
-
-        // Check for zero crosses
-        let zeroCross = "NONE";
-        if (prev <= 0 && last > 0) zeroCross = "BULLISH";
-        if (prev >= 0 && last < 0) zeroCross = "BEARISH";
 
         return {
             // Trend conditions
@@ -1551,7 +1527,7 @@ class MarketAnalyzer {
         const INDICATOR_WEIGHTS = {
             // MACD Weights
             macdZeroLineBullish: 3.0,      // Strongest weight for zero-line crossover
-            macdZeroLineBearish: 3.0,
+            macdZeroLineBearish: 2.2,      // Reduced from 2.5
             macdSignalLineBullish: 2.0,    // Regular weight for signal line crossover
             macdSignalLineBearish: 2.0,
             macdExtremeBullish: 1.5,       // Additional confirmation
@@ -1576,24 +1552,24 @@ class MarketAnalyzer {
             acceleratingRoc: 2.0,
             morningStar: 2.0,
             rsiOverbought: 2.5,
-            rsiFalling: 1.5,
-            rsiStrongFalling: 2.0,
+            rsiFalling: 1.3,               // Reduced from 1.5
+            rsiStrongFalling: 1.8,         // Reduced from 2.0
             stochRSIOverbought: 2.5,
-            stochRSITurningDown: 1.5,
-            stochRSIBearishDivergence: 2.5,
+            stochRSITurningDown: 1.3,      // Reduced from 1.5
+            stochRSIBearishDivergence: 2.2,// Reduced from 2.5
             aoBelowZero: 2.0,
-            aoFalling: 1.8,
-            aoStrongFalling: 2.2,
-            priceDeceleration: 2.5,
+            aoFalling: 1.5,                // Reduced from 1.8
+            aoStrongFalling: 1.9,          // Reduced from 2.2
+            priceDeceleration: 2.2,        // Reduced from 2.5
             gapDown: 2.0,
-            bearishEngulfing: 2.2,
-            threeBlackCrows: 2.5,
-            eveningStar: 2.0,
-            volumeDivergence: 2.5,
-            earlyWeakness: 3.0,
-            deceleratingRoc: 2.0,
-            volumeCrash: 1.8,
-            supportBreak: 2.0,
+            bearishEngulfing: 1.9,         // Reduced from 2.2
+            threeBlackCrows: 2.2,          // Reduced from 2.5
+            eveningStar: 1.8,              // Reduced from 2.0
+            volumeDivergence: 2.2,         // Reduced from 2.5
+            earlyWeakness: 2.5,            // Reduced from 3.0
+            deceleratingRoc: 1.8,          // Reduced from 2.0
+            volumeCrash: 1.5,              // Reduced from 1.8
+            supportBreak: 1.8,             // Reduced from 2.0
             resistanceBreak: 2.0,
             adxVeryStrong: 2.5,
             adxStrong: 2.0,
@@ -1604,11 +1580,11 @@ class MarketAnalyzer {
             atrIncreasing: 1.2,
             atrHighVolatility: 1.5,
             priceAboveEMA: 1.3,
-            priceBelowEMA: 1.5,
+            priceBelowEMA: 1.3,            // Reduced from 1.5
             emaStrongUp: 2.0,
             emaUp: 1.5,
-            emaStrongDown: 2.0,
-            emaDown: 1.5,
+            emaStrongDown: 1.8,            // Reduced from 2.0
+            emaDown: 1.3,                  // Reduced from 1.5
             emaDistance: 1.2
         };
 
@@ -1771,45 +1747,54 @@ class MarketAnalyzer {
         
         const oppose = AnalysisConfig.SCORING.OPPOSING_SIGNAL_THRESHOLDS;
         
-        // Handle conflicting strong signals
-        if (buyScore >= thresholds.strongBuy && sellScore >= thresholds.strongSell) {
-            return "CONFLICT";
+        // Calculate dominance requirements
+        const scoreDifference = Math.abs(buyScore - sellScore);
+        const totalScore = buyScore + sellScore;
+        const buyRatio = totalScore > 0 ? buyScore / totalScore : 0;
+        const sellRatio = totalScore > 0 ? sellScore / totalScore : 0;
+        
+        // Dynamic thresholds based on market condition
+        const strongDiff = priceTrend === 'BEARISH' ? 3.0 : 2.5; // Higher bar in bear markets
+        const regularDiff = 1.5; // Increased from 1.2
+        const strongDominance = 0.68; // Increased from 0.65
+        
+        // 1. Check STRONG signals (higher bar for SELLs)
+        if (buyScore >= thresholds.strongBuy && 
+            sellScore < oppose.REGULAR_STRONG && 
+            scoreDifference >= (priceTrend === 'BULLISH' ? 2.2 : 2.7) &&
+            buyRatio >= strongDominance) {
+            return earlyTrend ? "EARLY_STRONG_BUY" : "STRONG_BUY";
+        }
+        if (sellScore >= thresholds.strongSell && 
+            buyScore < oppose.REGULAR_STRONG && 
+            scoreDifference >= strongDiff &&
+            sellRatio >= strongDominance) {
+            return earlyTrend ? "EARLY_STRONG_SELL" : "STRONG_SELL";
         }
         
-        if (earlyTrend?.earlyMomentum || earlyTrend?.goodPullback) {
-            if (buyScore >= thresholds.strongBuy && sellScore < oppose.EARLY_STRONG) {
-                return "EARLY_STRONG_BUY";
-            }
-            if (buyScore >= thresholds.buy && sellScore < oppose.EARLY_WEAK) {
-                return "EARLY_BUY";
-            }
+        // 2. Check regular signals
+        if (buyScore >= thresholds.buy && 
+            sellScore < oppose.REGULAR_WEAK && 
+            scoreDifference >= regularDiff) {
+            return earlyTrend ? "EARLY_BUY" : "BUY";
         }
-    
-        if (earlyTrend?.earlyWeakness) {
-            if (sellScore >= thresholds.strongSell && buyScore < oppose.EARLY_STRONG) {
-                return "EARLY_STRONG_SELL";
-            }
-            if (sellScore >= thresholds.sell && buyScore < oppose.EARLY_WEAK) {
-                return "EARLY_SELL";
-            }
+        if (sellScore >= thresholds.sell && 
+            buyScore < oppose.REGULAR_WEAK && 
+            scoreDifference >= regularDiff) {
+            return earlyTrend ? "EARLY_SELL" : "SELL";
         }
         
-        if (buyScore >= thresholds.strongBuy && sellScore < oppose.REGULAR_STRONG) {
-            return "STRONG_BUY";
+        // 3. Check WEAK signals
+        const weakMultiplier = 0.75; // Slightly more lenient
+        if (buyScore >= thresholds.buy * weakMultiplier && buyRatio > 0.55) {
+            return "WEAK_BUY";
         }
-        if (buyScore >= thresholds.buy && sellScore < oppose.REGULAR_WEAK) {
-            return "BUY";
-        }
-        if (sellScore >= thresholds.strongSell && buyScore < oppose.REGULAR_STRONG) {
-            return "STRONG_SELL";
-        }
-        if (sellScore >= thresholds.sell && buyScore < oppose.REGULAR_WEAK) {
-            return "SELL";
+        if (sellScore >= thresholds.sell * weakMultiplier && sellRatio > 0.55) {
+            return "WEAK_SELL";
         }
         
         return "HOLD";
     }
-
     static analyzeMultipleTimeframes(allIndicators, allCandles, options = {}) {
         if (!allIndicators || !allCandles || typeof allIndicators !== 'object' || typeof allCandles !== 'object') {
             throw new Error('Invalid input: allIndicators and allCandles must be objects');
