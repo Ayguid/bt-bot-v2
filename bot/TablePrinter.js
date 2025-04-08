@@ -72,7 +72,7 @@ class TablePrinter {
     
     getRowColor(element) {
         const signal = element.analysis?.consensusSignal;
-        if (signal === 'BUY' || signal ===  'STRONG_BUY') return 'custom_green';
+        if (signal === 'BUY' || signal ===  'STRONG_BUY' ) return 'custom_green';
         if (signal === 'SELL' || signal ===  'STRONG_SELL') return 'custom_red';
         if (element.tradeable) return 'custom_yellow';
         return 'white';

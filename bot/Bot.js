@@ -2,8 +2,9 @@ require('dotenv').config();
 const path = require('path');
 const { getIndicators } = require('../analysis/indicators');
 //const MarketAnalyzer = require('../analysis/MarketAnalyzer-momentum');
-const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends-2');
+//const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends');
 //const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends-2');
+const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends-3');
 const { saveData } = require('../utils/fileManager');
 const TablePrinter = require('./TablePrinter');
 const TelegramBotHandler = require('./TelegramBotHandler');
@@ -368,7 +369,7 @@ class TradingBot {
             );
 
             const normalizedSignal = analysis.consensusSignal.toLowerCase();
-            if (['buy', 'sell', 'strong_buy', 'strong_sell', 'early_buy'].includes(normalizedSignal) &&
+            if (['buy', 'sell', 'strong_buy', 'strong_sell'].includes(normalizedSignal) &&
                 this.config.telegramBotEnabled) {
                 this.sendGroupChatAlert(pair.key, analysis, currentPrice);
             }

@@ -6,7 +6,7 @@ const config = {
     saveData: false,
     //
     loopDelay: 500, //delay for the whole pairs array loop
-    pairDelay: 500, //delay between pairs, default is false, just for debuggin
+    pairDelay: 250, //delay between pairs, default is false, just for debuggin
     alertCooldown: 10 * 60 * 1000, // 10 minutes in milliseconds
     klinesInterval_1: '1h',
     klinesInterval_2: '4h',
@@ -17,7 +17,7 @@ const config = {
     timeCheckInterval: 60000,
     maxTimeDifferenceMs: 1000,
     visualizationEnabled: true,  // Set to false to disable
-    visualizationPort: 5000,      // Change port if needed
+    visualizationPort: 8000,      // Change port if needed
     
 };
 
