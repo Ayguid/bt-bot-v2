@@ -160,7 +160,7 @@ class TradingBot {
 
         const sortedOrders = [...orders].sort((a, b) => new Date(b.time) - new Date(a.time));
         const [lastOrder, previousOrder] = sortedOrders.slice(0, 2);
-        console.log(1231231232131233, lastOrder.status);
+        //console.log(1231231232131233, lastOrder.status);
         switch (lastOrder.status) {
             case TradingBot.FILLED:
                 //console.log('Should handle FILLED order')
@@ -198,11 +198,19 @@ class TradingBot {
 
     async handleFilledOrder(pair, lastOrder, currentPrice, buyIsApproved, sellIsApproved, analysis) {
         console.log(`Order for ${pair.key} is filled. Order ID: ${lastOrder.orderId}`);
+
         if (lastOrder.side === TradingBot.SELL && buyIsApproved) {
+            const minHoldHours = 0.2; //in hours, Minimum time to hold before considering new order, current is 12min
+            const holdTimeHours = timePassed(new Date(lastOrder.updateTime)) / 3600;
+            if (holdTimeHours < minHoldHours) {// wait min 12min, since las sell before placing a new order
+                console.log(`Waiting for new buy order... (${holdTimeHours}h/${minHoldHours}h minimum)`);
+                return;
+            }//
             console.log('Last sell order filled. Conditions favorable for buying.');
             await this.exchangeManager.placeBuyOrder(pair, currentPrice);
         } else if (lastOrder.side === TradingBot.BUY) {
             console.log('Last buy order filled. Conditions favorable for selling.');
+            //console.log('Last order', lastOrder);
             await this.exchangeManager.placeSellOrder(pair, lastOrder);
         } else {
             console.log('Filled order exists, but current conditions not favorable for new order.');
@@ -217,7 +225,7 @@ class TradingBot {
 
         const remainingQty = lastOrder.origQty - lastOrder.executedQty;
         console.log(`Remaining quantity to be filled: ${remainingQty}`);
-
+        
         if (lastOrder.side === TradingBot.BUY) {
             if (buyIsApproved) {
                 const orderPriceDiff = calculateProfit(currentPrice, lastOrder.price);
@@ -362,6 +370,9 @@ class TradingBot {
             };
 
             const currentPrice = lastCandle[4];
+            //const averagePrice = (parseFloat(lastCandle[2]) + parseFloat(lastCandle[3])) / 2;
+            const averagePrice = (parseFloat(currentPrice) + parseFloat(lastCandle[3])) / 2;
+            console.log('Avg price:', averagePrice);    
             //console.log('Last close price: ', currentPrice);
             const { analysis, indicatorsPrimary, indicatorsSecondary } = this.analyzePairData(
                 ohlcvPrimary,

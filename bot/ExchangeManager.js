@@ -139,6 +139,25 @@ class ExchangeManager {
         return order;
     }
 
+    // async placeSellOrder(pair, lastOrder) {
+    //     console.log(`Placing sell order for ${pair.key}`);
+    //     const balances = await this.getBalances(pair.key);
+    //     const baseAsset = balances[0];
+    //     if (baseAsset.free <= 0) {
+    //         console.warn('Not enough balance to place sell order.');
+    //         return;
+    //     }
+        
+    //     const filters = this.exchangeInfo.symbols.find(symbol => symbol.symbol == pair.joinedPair).filters;
+    //     const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
+    //     const sellPrice = plusPercent(pair.profitMgn, lastOrder.price).toFixed(priceDecimals);
+        
+    //     const qtyDecimals = this.getDecimals(filters.find(f => f.filterType === 'LOT_SIZE').stepSize);
+    //     let qty = minusPercent(0.15, lastOrder.executedQty).toFixed(qtyDecimals); //0.1% is the exchange's fee
+
+    //     const order = await this.makeQueuedReq(placeOrder, pair.joinedPair, 'SELL', 'LIMIT', { price: sellPrice, quantity: qty, timeInForce: 'GTC', newClientOrderId: this.generateOrderId() });
+    //     return order;
+    // }
     async placeSellOrder(pair, lastOrder) {
         console.log(`Placing sell order for ${pair.key}`);
         const balances = await this.getBalances(pair.key);
@@ -152,10 +171,27 @@ class ExchangeManager {
         const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
         const sellPrice = plusPercent(pair.profitMgn, lastOrder.price).toFixed(priceDecimals);
         
-        const qty = lastOrder.executedQty;
-        const order = await this.makeQueuedReq(placeOrder, pair.joinedPair, 'SELL', 'LIMIT', { price: sellPrice, quantity: qty, timeInForce: 'GTC', newClientOrderId: this.generateOrderId() });
+        const lotSizeFilter = filters.find(f => f.filterType === 'LOT_SIZE');
+        const qtyDecimals = this.getDecimals(lotSizeFilter.stepSize);
+        
+        // Calculate quantity after fee (0.15% total fee)
+        let qty = minusPercent(0.1, lastOrder.executedQty);
+        
+        // Truncate to required decimals without rounding
+        qty = this.truncateToDecimals(qty, qtyDecimals);
+        
+        // Ensure we don't exceed available balance
+        qty = Math.min(qty, parseFloat(baseAsset.free));
+        
+        const order = await this.makeQueuedReq(placeOrder, pair.joinedPair, 'SELL', 'LIMIT', { 
+            price: sellPrice, 
+            quantity: qty.toString(), // Pass as string to avoid any number conversion issues
+            timeInForce: 'GTC', 
+            newClientOrderId: this.generateOrderId() 
+        });
         return order;
     }
+    
     async cancelOrder(pair, lastOrder) {
         const order = await this.makeQueuedReq(cancelOrder, pair.joinedPair, lastOrder.orderId);
         return order;
@@ -166,6 +202,19 @@ class ExchangeManager {
         const qty = partial ? lastOrder.executedQty : lastOrder.origQty;
         const order = await this.makeQueuedReq(cancelAndReplace, pair.joinedPair, 'SELL', 'LIMIT', { cancelOrderId: lastOrder.orderId, quantity: qty, price: currentPrice, timeInForce: 'GTC' });
         return order;
+    }
+    //
+    truncateToDecimals(num, decimals) {
+        const numStr = num.toString();
+        const decimalIndex = numStr.indexOf('.');
+        return decimalIndex === -1 ? num : parseFloat(numStr.substring(0, decimalIndex + decimals + 1));
+    }
+
+    //
+    adjustQuantity(qty, stepSize, decimals) {
+        const step = parseFloat(stepSize);
+        const adjusted = Math.floor(qty / step) * step;
+        return parseFloat(adjusted.toFixed(decimals));
     }
 }
 

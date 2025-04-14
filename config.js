@@ -6,17 +6,17 @@ const config = {
     saveData: false,
     //
     loopDelay: 500, //delay for the whole pairs array loop
-    pairDelay: 250, //delay between pairs, default is false, just for debuggin
+    pairDelay: 500, //delay between pairs, default is false, just for debuggin
     alertCooldown: 10 * 60 * 1000, // 10 minutes in milliseconds
-    klinesInterval_1: '1h',
+    klinesInterval_1: '2h',
     klinesInterval_2: '4h',
-    primaryKlines: '1h',
+    primaryKlines: '2h',
     analysisWindow: 24, // 24hr trends will be returned
     //server time diffs
     shouldResynch: false,
     timeCheckInterval: 60000,
     maxTimeDifferenceMs: 1000,
-    visualizationEnabled: true,  // Set to false to disable
+    visualizationEnabled: false,  // Set to false to disable
     visualizationPort: 8000,      // Change port if needed
     
 };

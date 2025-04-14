@@ -2,151 +2,133 @@
   {
     "key": "BTC_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "BTCUSDT"
   },
   {
     "key": "ETH_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "ETHUSDT"
   },
   {
-    "key": "SOL_USDT",
+    "key": "RENDER_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
-  },
-  {
-    "key": "GUN_USDT",
-    "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
-    "okLoss": -1.2,
-    "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "GUNUSDT"
   },
   {
     "key": "ICP_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "ICPUSDT"
   },
   {
-    "key": "TURBO_USDT",
+    "key": "STPT_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "TURBOUSDT"
   },
   {
     "key": "ARK_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "ARKUSDT"
   },
   {
-    "key": "WING_USDT",
+    "key": "SOL_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
-  },
-  {
-    "key": "FET_USDT",
-    "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
-    "okLoss": -1.2,
-    "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
-  },
-  {
-    "key": "BERA_USDT",
-    "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
-    "okLoss": -1.2,
-    "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "WINGUSDT"
   },
   {
     "key": "DOGE_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "BERAUSDT"
   },
   {
     "key": "FORTH_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "FORTHUSDT"
   },
   {
     "key": "DGB_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "DGBUSDT"
   },
   {
     "key": "RARE_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "RAREUSDT"
   },
   {
     "key": "FUN_USDT",
     "orderQty": 50,
-    "profitMgn": 0.6,
-    "belowPrice": 0.1,
+    "profitMgn": 0.7,
+    "belowPrice": 0.2,
     "okLoss": -1.2,
     "maxStopLoss": -1.5,
-    "okDiff": 0.5,
-    "tradeable": false
+    "okDiff": 1,
+    "tradeable": false,
+    "joinedPair": "FUNUSDT"
   }
 ]

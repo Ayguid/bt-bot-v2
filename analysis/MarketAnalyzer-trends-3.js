@@ -266,9 +266,14 @@ const AnalysisConfig = {
     // ===== TIMEFRAME ANALYSIS =====
     TIMEFRAMES: {
         DEFAULT_WEIGHTS: {
+            '1m': 0.3,
+            '5m': 0.5,
+            '15m': 0.7,
             '1h': 1.0,
             '2h': 1.5,
-            '4h': 2.5
+            '4h': 2.5,
+            '1d': 1.0,
+            '1w': 0.5
         },
         MIN_AGREEMENT_RATIO: 0.6
     },
@@ -281,8 +286,9 @@ const AnalysisConfig = {
 
     // ===== TIMEFRAME CLASSIFICATION =====
     TIMEFRAME_CLASSIFICATION: {
-        SHORT_TERM: ['1h'],
-        MEDIUM_TERM: ['2h','4h']
+        SHORT_TERM: ['1m', '5m', '15m', '30m'],
+        MEDIUM_TERM: ['1h', '2h','4h', '6h', '12h'],
+        LONG_TERM: ['1d', '1w', '1M']
     }
 };
 
@@ -1481,27 +1487,6 @@ class MarketAnalyzer {
         };
     }
 
-    // static validateSignal(signal, indicators, timeframe) {
-    //     const errors = [];
-    //     const isShortTerm = timeframe === '1h';
-        
-    //     if (signal.includes('BUY')) {
-    //         if (indicators.macdAnalysis?.macdLineBelowSignal && !isShortTerm) {
-    //             errors.push("MACD below signal line");
-    //         }
-    //         if (indicators.adxAnalysis?.mdiAbovePdi && indicators.adxAnalysis.trendStrength !== "WEAK") {
-    //             errors.push("Bearish ADX trend");
-    //         }
-    //         if (indicators.emaAnalysis?.priceBelowEMA && !isShortTerm) {
-    //             errors.push("Price below EMA");
-    //         }
-    //         if (!isShortTerm && !indicators.volumeAnalysis?.volumeSpike) {
-    //             errors.push("No volume spike confirmation");
-    //         }
-    //     }
-        
-    //     return errors;
-    // }
     static validateSignal(signal, indicators, timeframe) {
         const errors = [];
         const isShortTerm = timeframe === '1h';
