@@ -131,11 +131,11 @@ class TradingBot {
             const analysis2 = analyzePair(pair, ohlcvSecondary);
 
             //console.log(analysis, analysis2);
-            if (analysis.strongSignal || analysis2.strongSignal) {
+            if ((analysis.strongSignal || analysis2.strongSignal)  && this.config.telegramBotEnabled) {
                 console.log(`${pair}: ${analysis.strongSignal}`);
                 console.log(`${pair}: ${analysis2.strongSignal}`);
-                //this.sendGroupChatAlert(pair.key, analysis.strongSignal, currentPrice);
-              }
+                this.sendGroupChatAlert(pair.key, {consensusSignal: analysis.strongSignal}, currentPrice);
+            }
             // const normalizedSignal = analysis.consensusSignal.toLowerCase();
             // if (['buy', 'sell', 'strong_buy', 'strong_sell'].includes(normalizedSignal) &&
             //     this.config.telegramBotEnabled) {

@@ -767,68 +767,6 @@ class CandlestickPatternDetector {
     }
 }
   
-//   // Example usage with Binance data
-//   function example() {
-//     // Assuming you have a function that gets candles from Binance
-//     const getBinanceCandles = async (symbol, interval, limit) => {
-//       // Replace with your actual Binance API call
-//       // Example using node-binance-api
-//       const Binance = require('node-binance-api');
-//       const binance = new Binance().options({});
-//       return await binance.candlesticks(symbol, interval, false, {limit});
-//     };
-  
-//     // Usage example
-//     const analyzeSymbol = async (symbol) => {
-//       try {
-//         // Get candles from Binance (replace with your actual code)
-//         const candles = await getBinanceCandles(symbol, '1h', 100);
-        
-//         // Create detector instance
-//         const detector = new CandlestickPatternDetector({
-//           sensitivity: 0.6,
-//           volumeThreshold: 1.5
-//         });
-        
-//         // Analyze candles for patterns
-//         const patterns = detector.analyzeCandles(candles);
-        
-//         console.log(`==== ${symbol} Analysis ====`);
-//         console.log(`Overall signal: ${patterns.summary.overallSignal}`);
-        
-//         if (patterns.summary.recentPatterns.bullish.length > 0) {
-//           console.log('Bullish patterns:');
-//           patterns.summary.recentPatterns.bullish.forEach(p => {
-//             console.log(`- ${p.pattern} (strength: ${p.strength})`);
-//           });
-//         }
-        
-//         if (patterns.summary.recentPatterns.bearish.length > 0) {
-//         console.log('Bearish patterns:');
-//         patterns.summary.recentPatterns.bearish.forEach(p => {
-//           console.log(`- ${p.pattern} (strength: ${p.strength})`);
-//         });
-//       }
-      
-//       return patterns;
-//     } catch (error) {
-//       console.error(`Error analyzing ${symbol}:`, error);
-//       return { error };
-//     }
-//   };
-  
-//   // Example of analyzing multiple symbols
-//   const analyzeMultipleSymbols = async () => {
-//     const symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT'];
-    
-//     for (const symbol of symbols) {
-//       await analyzeSymbol(symbol);
-//     }
-//   };
-  
-//   analyzeMultipleSymbols();
-// }
-
 // Export the detector for use in other files
 module.exports = CandlestickPatternDetector;
 
