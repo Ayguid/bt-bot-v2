@@ -103,7 +103,7 @@ class TradingBot {
         console.log(`- Base Stop: ${stopPercentage}%`);
     
         // 2. Volatility adjustment with fallback
-        const candles = (analysis.candles && analysis.candles['1h']) || [];
+        const candles = (analysis.candles && analysis.candles[this.config.klinesInterval_1]) || [];
         const volatility = this.getVolatilityAssessment(candles);
         const volatilityFactor = 1 + (volatility / 50);
         console.log(`- Volatility: ${volatility}% → Factor: ${volatilityFactor.toFixed(2)}`);
@@ -160,23 +160,23 @@ class TradingBot {
 
         const sortedOrders = [...orders].sort((a, b) => new Date(b.time) - new Date(a.time));
         const [lastOrder, previousOrder] = sortedOrders.slice(0, 2);
-        //console.log(1231231232131233, lastOrder.status);
+        //console.log(lastOrder);
         switch (lastOrder.status) {
             case TradingBot.FILLED:
-                //console.log('Should handle FILLED order')
+                console.log('Should handle FILLED order')
                 await this.handleFilledOrder(pair, lastOrder, currentPrice, buyIsApproved, sellIsApproved, analysis);
                 break;
             case TradingBot.PARTIALLY_FILLED:
-                //console.log('Should handle PARTIALLY_FILLED order')
+                console.log('Should handle PARTIALLY_FILLED order')
                 await this.handlePartiallyFilledOrder(pair, lastOrder, previousOrder, currentPrice, buyIsApproved, sellIsApproved, analysis);
                 break;
             case TradingBot.NEW:
-                //console.log('Should handle NEW order')
+                console.log('Should handle NEW order')
                 await this.monitorPendingOrder(pair, lastOrder, previousOrder, currentPrice, buyIsApproved, sellIsApproved, analysis);
                 break;
             case TradingBot.CANCELED:
             case TradingBot.EXPIRED:
-                //console.log('Should handle CANCELED/EXPIRED order')
+                console.log('Should handle CANCELED/EXPIRED order')
                 await this.considerNewOrder(pair, lastOrder, currentPrice, buyIsApproved, sellIsApproved);
                 break;
             default:

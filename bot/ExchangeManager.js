@@ -197,10 +197,44 @@ class ExchangeManager {
         return order;
     }
 
-    async cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice, partial=false) {
+    // async cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice, partial=false) {
+    //     console.log('Cancelling and Selling to current price.');
+    //     const qty = partial ? lastOrder.executedQty : lastOrder.origQty;
+    //     const order = await this.makeQueuedReq(cancelAndReplace, pair.joinedPair, 'SELL', 'LIMIT', { cancelOrderId: lastOrder.orderId, quantity: qty, price: currentPrice, timeInForce: 'GTC' });
+    //     return order;
+    // }
+    async cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice, partial = false) {
         console.log('Cancelling and Selling to current price.');
-        const qty = partial ? lastOrder.executedQty : lastOrder.origQty;
-        const order = await this.makeQueuedReq(cancelAndReplace, pair.joinedPair, 'SELL', 'LIMIT', { cancelOrderId: lastOrder.orderId, quantity: qty, price: currentPrice, timeInForce: 'GTC' });
+    
+        // Get filters for the pair
+        const filters = this.exchangeInfo.symbols.find(symbol => symbol.symbol === pair.joinedPair).filters;
+    
+        // Get decimal precision
+        //const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
+        const qtyDecimals = this.getDecimals(filters.find(f => f.filterType === 'LOT_SIZE').stepSize);
+    
+        // Format price
+        const price = parseFloat(currentPrice);
+    
+        // Determine quantity
+        let qty;
+        if (partial) {
+            qty = parseFloat(lastOrder.origQty) - parseFloat(lastOrder.executedQty);
+        } else {
+            qty = parseFloat(lastOrder.origQty);
+        }
+    
+        // Truncate to required quantity decimals
+        qty = this.truncateToDecimals(qty, qtyDecimals);
+    
+        // Place the cancel and replace order
+        const order = await this.makeQueuedReq(cancelAndReplace, pair.joinedPair, 'SELL', 'LIMIT', {
+            cancelOrderId: lastOrder.orderId,
+            quantity: qty.toString(),
+            price,
+            timeInForce: 'GTC'
+        });
+    
         return order;
     }
     //

@@ -16,7 +16,7 @@ const config = {
     shouldResynch: false,
     timeCheckInterval: 60000,
     maxTimeDifferenceMs: 1000,
-    visualizationEnabled: false,  // Set to false to disable
+    visualizationEnabled: true,  // Set to false to disable
     visualizationPort: 8000,      // Change port if needed
     
 };
