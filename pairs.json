@@ -11,7 +11,7 @@
     "joinedPair": "BTCUSDT"
   },
   {
-    "key": "ETH_USDT",
+    "key": "WING_USDT",
     "orderQty": 50,
     "profitMgn": 0.6,
     "belowPrice": 0.25,

@@ -1,10 +1,7 @@
 require('dotenv').config();
 const path = require('path');
 const { getIndicators } = require('../analysis/indicators');
-//const MarketAnalyzer = require('../analysis/MarketAnalyzer-momentum');
-//const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends');
-//const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends-2');
-const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends-3');
+const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends');
 const { saveData } = require('../utils/fileManager');
 const TablePrinter = require('./TablePrinter');
 const TelegramBotHandler = require('./TelegramBotHandler');
@@ -370,15 +367,14 @@ class TradingBot {
             };
 
             const currentPrice = lastCandle[4];
-            //const averagePrice = (parseFloat(lastCandle[2]) + parseFloat(lastCandle[3])) / 2;
-            const averagePrice = (parseFloat(currentPrice) + parseFloat(lastCandle[3])) / 2;
-            console.log('Avg price:', averagePrice);    
+            // const averagePrice = (parseFloat(currentPrice) + parseFloat(lastCandle[3])) / 2;
+            // console.log('Avg price:', averagePrice);    
             //console.log('Last close price: ', currentPrice);
             const { analysis, indicatorsPrimary, indicatorsSecondary } = this.analyzePairData(
                 ohlcvPrimary,
                 ohlcvSecondary
             );
-
+            console.log(this.config.klinesInterval_1 + ' suggested price: ', analysis.signals[0].details.trend.suggestedBuyInPrice, this.config.klinesInterval_2 + ' suggested price: ',analysis.signals[1].details.trend.suggestedBuyInPrice)
             const normalizedSignal = analysis.consensusSignal.toLowerCase();
             if (['buy', 'sell', 'strong_buy', 'strong_sell'].includes(normalizedSignal) &&
                 this.config.telegramBotEnabled) {
