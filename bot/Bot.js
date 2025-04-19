@@ -59,6 +59,7 @@ class TradingBot {
             removePair: () => this.pairManager.addRemovePair(args[0], false, false),
             addTpair: () => this.pairManager.addRemovePair(args[0], true, true),
             removeTpair: () => this.pairManager.addRemovePair(args[0], false, true),
+            alert: () => this.config.telegramAlertEnabled = !this.config.telegramAlertEnabled,
         };
         const action = commands[command];
         return action ? await action() : 'Unknown command.';
@@ -377,7 +378,7 @@ class TradingBot {
             console.log(this.config.klinesInterval_1 + ' suggested price: ', analysis.signals[0].details.trend.suggestedBuyInPrice, this.config.klinesInterval_2 + ' suggested price: ',analysis.signals[1].details.trend.suggestedBuyInPrice)
             const normalizedSignal = analysis.consensusSignal.toLowerCase();
             if (['buy', 'sell', 'strong_buy', 'strong_sell'].includes(normalizedSignal) &&
-                this.config.telegramBotEnabled) {
+            this.config.telegramAlertEnabled) {
                 this.sendGroupChatAlert(pair.key, analysis, currentPrice);
             }
 

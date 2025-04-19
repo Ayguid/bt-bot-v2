@@ -35,7 +35,7 @@ class TelegramBotHandler {
     }
 
     sendGroupChatAlert(pair, analysis, currentPrice) {
-        if (!this.config.telegramBotEnabled) {
+        if (!this.config.telegramAlertEnabled) {
             console.log(`Telegram bot is disabled, not sending alert for ${pair}.`);
             return; // Exit early if the Telegram bot is disabled
         }

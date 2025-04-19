@@ -51,7 +51,7 @@
     "tradeable": false
   },
   {
-    "key": "BNB_USDT",
+    "key": "FET_USDT",
     "orderQty": 50,
     "profitMgn": 0.6,
     "belowPrice": 0.25,

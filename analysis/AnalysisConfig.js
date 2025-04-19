@@ -42,7 +42,7 @@ const AnalysisConfig = {
         SIGNIFICANT_INCREASE: 1.35,
         SIGNIFICANT_DECREASE: 0.55,
         DIVERGENCE_THRESHOLD: 0.25,
-        ENGULFING_INCREASE_REQUIRED: 50,
+        ENGULFING_INCREASE_REQUIRED: 20, // Reduced from 50
         AVG_WINDOW: 24
     },
 
@@ -177,9 +177,11 @@ const AnalysisConfig = {
 
     // ===== PATTERN DETECTION =====
     PATTERNS: {
-        BODY_SIZE_RATIO: 0.75,
-        SMALL_BODY_RATIO: 0.15,
-        STAR_PATTERN_PRICE_CHANGE: 0.012
+        // More realistic body size requirements
+        BODY_SIZE_RATIO: 0.20,         // Reduced from 0.35
+        SMALL_BODY_RATIO: 0.10,        // Reduced from 0.2  
+        STAR_PATTERN_PRICE_CHANGE: 0.015, // Reduced from 0.02 (1.5% reversal required)
+        MAX_WICK_RATIO: 0.6,      // Increased from 0.3         // Increased from 0.3
     },
 
     // ===== EARLY DETECTION =====
@@ -201,10 +203,10 @@ const AnalysisConfig = {
                 strongSell: 7.5
             },
             BEARISH: { 
-                buy: 4.0,
-                strongBuy: 7.0,
-                sell: 4.5,
-                strongSell: 8.0
+                buy: 5.0,       // Increased from 4.0
+                strongBuy: 8.0, // Increased from 7.0
+                sell: 3.5,      // Lowered from 4.5
+                strongSell: 7.0 // Lowered from 8.0
             },
             SIDEWAYS: { 
                 buy: 3.5,
