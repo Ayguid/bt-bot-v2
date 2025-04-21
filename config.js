@@ -18,7 +18,7 @@ const config = {
     timeCheckInterval: 60000,
     maxTimeDifferenceMs: 1000,
     visualizationEnabled: true,  // Set to false to disable
-    visualizationPort: 8000,      // Change port if needed
+    visualizationPort: 5000,      // Change port if needed
     
 };
 

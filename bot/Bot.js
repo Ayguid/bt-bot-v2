@@ -1,7 +1,7 @@
 require('dotenv').config();
 const path = require('path');
 const { getIndicators } = require('../analysis/indicators');
-const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends');
+const MarketAnalyzer = require('../analysis/MarketAnalyzer-trends-new');
 const { saveData } = require('../utils/fileManager');
 const TablePrinter = require('./TablePrinter');
 const TelegramBotHandler = require('./TelegramBotHandler');

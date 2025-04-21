@@ -61,18 +61,19 @@ const IndicatorUtils = {
     },
 
     calculateSlope: (values) => {
-        if (!values || values.length < 2) return 0;
+        // Convert all string values to numbers
+        const numericValues = values.map(Number);
         
         let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-        const n = values.length;
-        
+        const n = numericValues.length;
+    
         for (let i = 0; i < n; i++) {
             sumX += i;
-            sumY += values[i];
-            sumXY += i * values[i];
+            sumY += numericValues[i]; // Now a numeric sum
+            sumXY += i * numericValues[i];
             sumXX += i * i;
         }
-        
+    
         const denominator = n * sumXX - sumX * sumX;
         if (denominator === 0) return 0;
         
@@ -238,7 +239,7 @@ const PriceAnalyzer = {
             (trendStrength.includes("UP") && lastThree[0] > lastThree[1] && lastThree[1] > lastThree[2]) ||
             (trendStrength.includes("DOWN") && lastThree[0] < lastThree[1] && lastThree[1] < lastThree[2])
         ) && Math.abs(avgAcceleration) > (accelThreshold * 0.7);
-
+        
         return {
             priceChanges,
             acceleration: parseFloat(avgAcceleration.toFixed(4)),
@@ -472,7 +473,19 @@ const PatternDetector = {
         if (validCandles.length < AnalysisConfig.MIN_DATA_POINTS.PATTERN_DETECTION) return emptyResult;
         
         const [prev2, prev1, current] = validCandles.slice(-3);
-        const bodySize = (candle) => Math.abs(candle[4] - candle[1]);
+        const bodySize = (candle) => {
+            const body = Math.abs(candle[4] - candle[1]);
+            const range = candle[2] - candle[3];
+            // Consider wicks if they exceed maximum allowed ratio
+            const upperWickRatio = (candle[2] - Math.max(candle[1], candle[4])) / range;
+            const lowerWickRatio = (Math.min(candle[1], candle[4]) - candle[3]) / range;
+            
+            if (upperWickRatio > AnalysisConfig.PATTERNS.MAX_WICK_RATIO || 
+                lowerWickRatio > AnalysisConfig.PATTERNS.MAX_WICK_RATIO) {
+                return 0; // Invalid if wicks too large
+            }
+            return body;
+        };
         const avgBodySize = (bodySize(prev2) + bodySize(prev1) + bodySize(current)) / 3;
         
         return {
@@ -480,13 +493,16 @@ const PatternDetector = {
                 prev2[4] > prev2[1] && 
                 prev1[4] > prev1[1] && 
                 current[4] > current[1] &&
-                bodySize(current) > avgBodySize * AnalysisConfig.PATTERNS.BODY_SIZE_RATIO
+                bodySize(current) > avgBodySize * AnalysisConfig.PATTERNS.BODY_SIZE_RATIO &&
+                current[4] > prev1[4] * 1.005 && // Explicit progression check
+                prev1[4] > prev2[4] * 1.005
             ),
             isThreeBlackCrows: (
                 prev2[4] < prev2[1] && 
                 prev1[4] < prev1[1] && 
                 current[4] < current[1] &&
-                bodySize(current) > avgBodySize * AnalysisConfig.PATTERNS.BODY_SIZE_RATIO
+                bodySize(current) > avgBodySize * AnalysisConfig.PATTERNS.BODY_SIZE_RATIO &&
+                current[4] < prev2[4] // Added progressive close requirement
             ),
             isEveningStar: (
                 prev2[4] > prev2[1] && 
@@ -517,10 +533,9 @@ const PatternDetector = {
             bullish: (
                 lastCandle[4] > lastCandle[1] &&
                 previousCandle[4] < previousCandle[1] &&
-                lastBody > prevBody * AnalysisConfig.PATTERNS.BODY_SIZE_RATIO &&
-                lastCandle[4] > previousCandle[1] &&
-                lastCandle[1] < previousCandle[4] &&
-                volumeIncrease > AnalysisConfig.VOLUME.ENGULFING_INCREASE_REQUIRED
+                lastBody > prevBody * 0.5 && // Reduced from full body requirement
+                (lastCandle[4] > previousCandle[1] || lastCandle[1] < previousCandle[4]) && // Partial engulf allowed
+                volumeIncrease > AnalysisConfig.VOLUME.ENGULFING_INCREASE_REQUIRED * 0.7 // Volume threshold reduced
             ),
             bearish: (
                 lastCandle[4] < lastCandle[1] &&
@@ -546,16 +561,51 @@ const PatternDetector = {
     },
 
     detectVolumeDivergence: (prices, volumes, lookback = 5) => {
-        if (!prices || !volumes || prices.length < lookback || volumes.length < lookback) return false;
+        // 1. Input validation
+        if (!prices || !volumes || prices.length < lookback || volumes.length < lookback) {
+            return false;
+        }
+    
+        // 2. Convert to numbers (defensive programming)
+        const priceSlice = prices.slice(-lookback).map(p => parseFloat(p));
+        const volumeSlice = volumes.slice(-lookback).map(v => parseFloat(v));
+    
+        // 3. Check for invalid data
+        if (priceSlice.some(isNaN) || volumeSlice.some(isNaN)) {
+            return false;
+        }
+    
+        // 4. Calculate percentage changes (normalization)
+        const priceChanges = [];
+        const volumeChanges = [];
         
-        const priceSlice = prices.slice(-lookback);
-        const volumeSlice = volumes.slice(-lookback);
-        
-        const priceTrend = IndicatorUtils.calculateSlope(priceSlice);
-        const volumeTrend = IndicatorUtils.calculateSlope(volumeSlice);
-        
-        return (priceTrend > 0 && volumeTrend < -AnalysisConfig.VOLUME.DIVERGENCE_THRESHOLD) || 
-               (priceTrend < 0 && volumeTrend > AnalysisConfig.VOLUME.DIVERGENCE_THRESHOLD);
+        for (let i = 1; i < lookback; i++) {
+            const priceChange = (priceSlice[i] - priceSlice[i-1]) / priceSlice[i-1];
+            const volumeChange = (volumeSlice[i] - volumeSlice[i-1]) / Math.max(volumeSlice[i-1], 0.0001);
+            
+            priceChanges.push(priceChange);
+            volumeChanges.push(volumeChange);
+        }
+    
+        // 5. Calculate slopes using your existing IndicatorUtils
+        const priceTrend = IndicatorUtils.calculateSlope(priceChanges);
+        const volumeTrend = IndicatorUtils.calculateSlope(volumeChanges);
+    
+        // 6. Apply threshold from your config
+        const threshold = AnalysisConfig.VOLUME.DIVERGENCE_THRESHOLD; // 0.25 from your config
+    
+        // 7. Strict divergence detection
+        const isBearishDivergence = 
+            priceTrend > 0 && 
+            volumeTrend < -threshold && 
+            Math.abs(volumeTrend) > Math.abs(priceTrend);
+    
+        const isBullishDivergence = 
+            priceTrend < 0 && 
+            volumeTrend > threshold && 
+            Math.abs(volumeTrend) > Math.abs(priceTrend);
+    
+        return isBearishDivergence || isBullishDivergence;
     },
     
     detectSupportBreak: (candles, supportLevel) => {
@@ -1216,7 +1266,7 @@ class MarketAnalyzer {
             if (macd?.macdLineBelowSignal && !allowWeakerSignals) {
                 errors.push("MACD below signal line");
             }
-            if (macd?.isBelowZero && !macd?.zeroCross === "BULLISH") {
+            if (macd?.isBelowZero && macd?.zeroCross !== "BULLISH") {  // Fixed condition
                 errors.push("MACD below zero line without bullish crossover");
             }
             if (macd?.isHistogramFalling && !allowWeakerSignals) {
@@ -1241,19 +1291,17 @@ class MarketAnalyzer {
             if (macd?.macdLineAboveSignal && !allowWeakerSignals) {
                 errors.push("MACD above signal line");
             }
-            if (macd?.isAboveZero && !macd?.zeroCross === "BEARISH") {
+            if (macd?.isAboveZero && macd?.zeroCross !== "BEARISH") {  // Fixed condition
                 errors.push("MACD above zero line without bearish crossover");
             }
             if (macd?.isHistogramRising && !allowWeakerSignals) {
                 errors.push("Rising MACD histogram");
             }
-    
-            // Add other sell-specific validations here if needed
         }
     
         // STRONG signal additional requirements
         if (signal.includes('STRONG')) {
-            if (!macd?.strength === "STRONG") {
+            if (macd?.strength !== "STRONG") {  // Fixed condition
                 errors.push("Lacks strong MACD momentum for STRONG signal");
             }
             if (signal.includes('BUY') && !macd?.isHistogramRising) {
@@ -1263,7 +1311,7 @@ class MarketAnalyzer {
                 errors.push("Lacks falling histogram for STRONG_SELL");
             }
         }
-    
+        
         return errors;
     }
 
