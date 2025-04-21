@@ -1327,15 +1327,6 @@ class MarketAnalyzer {
         
         return downgradeMap[signal] || signal;
     }
-    // static downgradeSignal(signal) {
-    //     if (signal.includes('STRONG_')) {
-    //         return signal.replace('STRONG_', '');
-    //     }
-    //     if (signal.includes('BUY') || signal.includes('SELL')) {
-    //         return 'WEAK_' + signal;
-    //     }
-    //     return 'HOLD';
-    // }
 
     static calculateScores(analysis) {
         const {
