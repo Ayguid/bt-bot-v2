@@ -31,18 +31,7 @@ class TradingBot {
         this.exchangeManager = new ExchangeManager(this.config);
         this.telegramBotHandler = new TelegramBotHandler(this.config, this.executeCommand.bind(this));
         this.initialized = false;
-        
-        // Current state properties
-        this.currentPair = null;
-        this.precisionEntry = null;
-        this.currentPrice = null;
-        this.currentOrders = [];
-        this.currentOrderBook = null;
-        this.currentAnalysis = null;
-        this.currentIndicatorsPrimary = null;
-        this.currentIndicatorsSecondary = null;
-        this.currentOhlcvPrimary = null;
-        this.currentOhlcvSecondary = null;
+        this.orderTracker = new Map(); // Track order history per pair
     }
 
     async init() {
@@ -90,11 +79,12 @@ class TradingBot {
             currentPosition: null
         };
         
+        // Implement actual stats tracking here
         return stats;
     }
 
-    sendGroupChatAlert() {
-        this.telegramBotHandler.sendGroupChatAlert(this.currentPair.key, this.currentAnalysis, this.currentPrice);
+    sendGroupChatAlert(pair, analysis, currentPrice) {
+        this.telegramBotHandler.sendGroupChatAlert(pair, analysis, currentPrice);
     }
 
     startBot() {
@@ -121,102 +111,90 @@ class TradingBot {
         return parseFloat((atr * 100).toFixed(2));
     }
 
-    /**
-    * Analyzes candle patterns to determine potential market direction
-    * 
-    * @param {Array} candles - Array of candle data where each candle is an array of [open, close, high, low, ...]
-    * @returns {number} Signal strength between -1 and 1 where:
-    *                   - Positive values indicate bullish signal (0.8 for strong bullish)
-    *                   - Negative values indicate bearish signal (-0.8 for strong bearish)
-    *                   - 0 indicates no clear signal
-    */
     analyzeCandlePattern(candles) {
-        // Return 0 if we don't have enough candles to analyze
         if (!candles || candles.length < 3) return 0;
         
-        // Get the previous and current candles
         const [prev, current] = candles.slice(-2);
-        
-        // Calculate the body size (absolute difference between open and close)
         const bodySize = Math.abs(current[1] - current[4]);
-        
-        // Calculate the total candle size (high minus low)
         const totalSize = current[2] - current[3];
-        
-        // Calculate the ratio of body to total size (avoiding division by zero)
         const bodyRatio = bodySize / (totalSize || 0.0001);
         
-        // Strong bullish signal: if closing price is higher than opening price
-        // and body makes up at least 70% of the total candle
+        // Bullish pattern detection
         if (current[4] > current[1] && bodyRatio > 0.7) {
-            return 0.8; // Strong bullish signal
+            return 0.8; // Strong bullish candle
         }
         
-        // Strong bearish signal: if closing price is lower than opening price
-        // and body makes up at least 70% of the total candle
+        // Bearish pattern detection
         if (current[4] < current[1] && bodyRatio > 0.7) {
-            return -0.8; // Strong bearish signal
+            return -0.8; // Strong bearish candle
         }
         
-        // No clear pattern detected
         return 0;
     }
 
-    evaluateSignals() {
+    evaluateSignals(analysis) {
         return {
-            shouldBuy: this.currentAnalysis.consensusSignal === TradingBot.BUY ||
-                this.currentAnalysis.consensusSignal === TradingBot.STRONG_BUY ||
-                this.currentAnalysis.consensusSignal === TradingBot.EARLY_BUY,
-            shouldSell: this.currentAnalysis.consensusSignal === TradingBot.SELL || 
-                this.currentAnalysis.consensusSignal === TradingBot.STRONG_SELL
+            shouldBuy: analysis.consensusSignal === TradingBot.BUY ||
+                analysis.consensusSignal === TradingBot.STRONG_BUY ||
+                analysis.consensusSignal === TradingBot.EARLY_BUY,
+            shouldSell: analysis.consensusSignal === TradingBot.SELL || 
+                analysis.consensusSignal === TradingBot.STRONG_SELL
         };
     }
 
-    calculateDynamicProfit(volatility) {
-        let profitTarget = this.currentPair.profitMgn;
+    calculateDynamicProfit(pair, volatility) {
+        let profitTarget = pair.profitMgn;
         const volatilityAdjustment = 1 + (volatility / 100);
         profitTarget *= volatilityAdjustment;
         
-        const maxProfitTarget = this.currentPair.profitMgn * 2;
+        const maxProfitTarget = pair.profitMgn * 2;
         profitTarget = Math.min(profitTarget, maxProfitTarget);
         
-        const minProfitTarget = this.currentPair.profitMgn * 0.8;
+        const minProfitTarget = pair.profitMgn * 0.8;
         profitTarget = Math.max(profitTarget, minProfitTarget);
         
         return profitTarget;
     }
 
-    getDynamicStopLoss(entryPrice) {
-        console.log('\x1b[33m%s\x1b[0m', `\n=== Calculating Dynamic Stop for ${this.currentPair.key} ===`);
+    getDynamicStopLoss(pair, entryPrice, currentPrice, analysis, orders = []) {
+        console.log('\x1b[33m%s\x1b[0m', `\n=== Calculating Dynamic Stop for ${pair.key} ===`);
         
-        const lastBuyOrder = this.currentOrders
+        // Find the last filled buy order
+        const lastBuyOrder = orders
             .filter(o => o.side === TradingBot.BUY && o.status === TradingBot.FILLED)
             .sort((a, b) => new Date(b.time) - new Date(a.time))[0];
         
+        // Use actual executed price if available, otherwise fall back to provided entryPrice
         const actualEntryPrice = lastBuyOrder ? parseFloat(lastBuyOrder.price) : entryPrice;
         
         console.log(`- Using Entry Price: ${actualEntryPrice}`);
-        console.log(`- Current Price: ${this.currentPrice}`);
+        console.log(`- Current Price: ${currentPrice}`);
         
-        let stopPercentage = this.currentPair.okLoss || -2;
+        // Base stop from configuration
+        let stopPercentage = pair.okLoss || -2;
         console.log(`- Base Stop: ${stopPercentage}%`);
     
-        const candles = (this.currentAnalysis.candles && this.currentAnalysis.candles[this.config.klinesInterval_1]) || [];
+        // 1. Volatility adjustment (primary factor)
+        const candles = (analysis.candles && analysis.candles[this.config.klinesInterval_1]) || [];
         const volatility = this.getVolatilityAssessment(candles);
         const volatilityFactor = 1 + (volatility / 50);
         console.log(`- Volatility: ${volatility}% → Factor: ${volatilityFactor.toFixed(2)}`);
     
+        // 2. Price momentum adjustment (alternative to trend strength)
         const momentum = this.calculatePriceMomentum(candles);
         const momentumFactor = momentum > 0 ? 0.9 : 1.1;
         console.log(`- Momentum: ${momentum.toFixed(2)} → Factor: ${momentumFactor}`);
     
-        const currentPL = calculateProfit(this.currentPrice, actualEntryPrice);
+        // 3. Current P/L adjustment
+        const currentPL = calculateProfit(currentPrice, actualEntryPrice);
         const plFactor = currentPL < -1 ? 1.2 : 1.0;
         console.log(`- Current P/L: ${currentPL.toFixed(2)}% → Factor: ${plFactor}`);
     
+        // Calculate adjusted stop
         stopPercentage *= volatilityFactor * momentumFactor * plFactor;
         
-        stopPercentage = Math.max(stopPercentage, this.currentPair.maxStopLoss || -5);
+        // Apply absolute limits
+        stopPercentage = Math.max(stopPercentage, pair.maxStopLoss || -5);
         stopPercentage = Math.min(stopPercentage, -0.3);
         
         const stopPrice = actualEntryPrice * (1 + (stopPercentage/100));
@@ -228,6 +206,7 @@ class TradingBot {
         };
     }
     
+    // New helper method to calculate price momentum
     calculatePriceMomentum(candles, period = 5) {
         if (!candles || candles.length < period) return 0;
         
@@ -236,120 +215,88 @@ class TradingBot {
             i > 0 ? (c[4] - arr[i-1][4]) / arr[i-1][4] : 0
         );
         
+        // Weighted average where recent changes have more impact
         const momentum = priceChanges.reduce((sum, change, index) => 
             sum + (change * (index + 1)), 0) / 
             (priceChanges.length * (priceChanges.length + 1) / 2);
         
-        return parseFloat((momentum * 100).toFixed(2));
+        return parseFloat((momentum * 100).toFixed(2)); // Return as percentage
     }
 
-    buyInPrice() {
-        //return minusPercent(this.currentPair.belowPrice, this.currentPrice);
-        return minusPercent(this.precisionEntry, this.currentPrice);
-    }
+    buyInPrice(percent, price){
+        return minusPercent(percent, price);
+    }    
 
-    calculatePrecisionEntry() {
-        // Ensure we have valid order book data
-        if (!this.currentOrderBook || 
-            !this.currentOrderBook.asks || 
-            !this.currentOrderBook.asks[0] || 
-            !this.currentOrderBook.bids || 
-            !this.currentOrderBook.bids[0]) {
-            return this.currentPair.belowPrice || 0.2; // Default fallback
-        }
-    
-        // Calculate current spread percentage
-        const bestAsk = parseFloat(this.currentOrderBook.asks[0][0]);
-        const bestBid = parseFloat(this.currentOrderBook.bids[0][0]);
-        const spreadPercentage = ((bestAsk - bestBid) / this.currentPrice) * 100;
-    
-        // Dynamic minimum distance based on spread (with multiplier for safety)
-        const spreadMultiplier = 1.5; // Adjust based on volatility tolerance
-        let minDistance = Math.max(0.05, spreadPercentage * spreadMultiplier);
-    
-        // Apply pair-specific constraints
-        minDistance = Math.min(minDistance, 1.0); // Never exceed 1% 
-        minDistance = Math.max(
-            minDistance,
-            this.currentPair.belowPrice || 0.2, // Minimum from pair config
-            0.1 // Absolute minimum
-        );
-    
-        // Round to 2 decimal places for cleaner display
-        return parseFloat(minDistance.toFixed(2));
-    }
-
-    async trade() {
-        if (!this.currentPair || !this.currentPrice || !this.currentAnalysis) {
+    async trade(pair, currentPrice, orders = [], analysis) {
+        if (!pair || !currentPrice || !analysis) {
             console.error('Missing trading parameters');
             return;
         }
 
-        console.log(`\n=== Trading ${this.currentPair.key} at ${this.currentPrice} ===`);
+        console.log(`\n=== Trading ${pair.key} at ${currentPrice} ===`);
 
-        const { shouldBuy, shouldSell } = this.evaluateSignals();
-        const lastOrder = this.currentOrders.length > 0 ? 
-            [...this.currentOrders].sort((a, b) => new Date(b.time) - new Date(a.time))[0] : null;
+        const { shouldBuy, shouldSell } = this.evaluateSignals(analysis);
+        const lastOrder = orders.length > 0 ? 
+            [...orders].sort((a, b) => new Date(b.time) - new Date(a.time))[0] : null;
 
         if (!lastOrder) {
-            return await this.considerNewOrder(shouldBuy, shouldSell);
+            return await this.considerNewOrder(pair, currentPrice, shouldBuy, shouldSell);
         }
 
         switch (lastOrder.status) {
             case TradingBot.FILLED:
-                return await this.handleFilledOrder(lastOrder, shouldBuy, shouldSell);
+                return await this.handleFilledOrder(pair, lastOrder, currentPrice, shouldBuy, shouldSell, analysis);
             case TradingBot.PARTIALLY_FILLED:
-                return await this.handlePartialOrder(lastOrder, shouldBuy, shouldSell);
+                return await this.handlePartialOrder(pair, lastOrder, currentPrice, shouldBuy, shouldSell, analysis, orders);
             case TradingBot.NEW:
-                return await this.monitorPendingOrder(lastOrder, shouldBuy, shouldSell);
+                return await this.monitorPendingOrder(pair, lastOrder, currentPrice, shouldBuy, shouldSell, analysis, orders);
             case TradingBot.CANCELED:
             case TradingBot.EXPIRED:
-                return await this.handleExpiredOrder(lastOrder, shouldBuy, shouldSell); 
+                console.log('Should handle CANCELED/EXPIRED order')
+                return await this.handleExpiredOrder(pair, lastOrder, currentPrice, shouldBuy, shouldSell, analysis, orders); 
             default:
                 console.log(`Unhandled order status: ${lastOrder.status}`);
         }
     }
 
-    async handleExpiredOrder(lastOrder) {
-        console.log(`Handling ${lastOrder.status} order for ${this.currentPair.key}`);
+    async handleExpiredOrder(pair, lastOrder, currentPrice, shouldBuy, shouldSell, analysis, orders) {
+        console.log(`Handling ${lastOrder.status} order for ${pair.key}`);
         
-        if (lastOrder.side === TradingBot.BUY && this.evaluateSignals().shouldBuy) {
+        // For expired buy orders, consider re-entry if conditions are still favorable
+        if (lastOrder.side === TradingBot.BUY && shouldBuy) {
             const hoursSinceExpiry = timePassed(new Date(lastOrder.updateTime)) / 3600;
-            const minReentryDelay = this.config.minReentryDelay;
+            const minReentryDelay = this.config.minReentryDelay // 
             
             if (hoursSinceExpiry >= minReentryDelay) {
                 console.log('Conditions still favorable - attempting new buy order');
-                return await this.exchangeManager.placeBuyOrder(
-                    this.currentPair, 
-                    this.buyInPrice()
-                );
+                return await this.exchangeManager.placeBuyOrder(pair, this.buyInPrice(pair.belowPrice, currentPrice));
             } else {
                 console.log(`Waiting for re-entry delay (${hoursSinceExpiry.toFixed(2)}h/${minReentryDelay}h)`);
             }
         }
+        // For expired sell orders, evaluate market conditions
         else if (lastOrder.side === TradingBot.SELL) {
-            const dynamicStop = this.getDynamicStopLoss(lastOrder.price);
+            const dynamicStop = this.getDynamicStopLoss(
+                pair,
+                lastOrder.price,
+                currentPrice,
+                analysis,
+                orders
+            );
             
-            if (this.currentPrice <= dynamicStop.price) {
+            if (currentPrice <= dynamicStop.price) {
                 console.log(`Price hit stop level after order expired - emergency sell`);
-                return await this.exchangeManager.placeSellOrder(
-                    this.currentPair, 
-                    lastOrder, 
-                    this.currentPrice
-                );
+                return await this.exchangeManager.placeSellOrder(pair, lastOrder, currentPrice);
             }
         }
         
         console.log(`No action taken on ${lastOrder.status} order`);
     }
 
-    async considerNewOrder(shouldBuy, shouldSell) {
+    async considerNewOrder(pair, currentPrice, shouldBuy, shouldSell) {
         if (shouldBuy) {
             console.log('Conditions favorable for placing a buy order');
-            await this.exchangeManager.placeBuyOrder(
-                this.currentPair, 
-                this.buyInPrice()
-            );
+            await this.exchangeManager.placeBuyOrder(pair, this.buyInPrice(pair.belowPrice, currentPrice));
         } else if (shouldSell) {
             console.log('Conditions favorable for placing a sell order');
         } else {
@@ -357,114 +304,100 @@ class TradingBot {
         }
     }
 
-    async handleFilledOrder(lastOrder, shouldBuy, shouldSell) {
-        console.log(`Handling filled ${lastOrder.side} order for ${this.currentPair.key}`);
+    async handleFilledOrder(pair, lastOrder, currentPrice, shouldBuy, shouldSell, analysis) {
+        console.log(`Handling filled ${lastOrder.side} order for ${pair.key}`);
 
         if (lastOrder.side === TradingBot.BUY) {
-            const volatility = this.getVolatilityAssessment(
-                this.currentAnalysis.candles[this.config.klinesInterval_1]
-            );
-            const dynamicProfitTarget = this.calculateDynamicProfit(volatility);
+            const volatility = this.getVolatilityAssessment(analysis.candles[this.config.klinesInterval_1]);
+            const dynamicProfitTarget = this.calculateDynamicProfit(pair, volatility);
             
-            const profit = calculateProfit(this.currentPrice, lastOrder.price);
+            const profit = calculateProfit(currentPrice, lastOrder.price);
             console.log(`Current profit: ${profit.toFixed(2)}% (Target: ${dynamicProfitTarget.toFixed(2)}%)`);
 
             const shouldTakeProfit = profit >= dynamicProfitTarget;
-            const shouldCutLosses = profit <= this.currentPair.maxStopLoss;
-            const candlePatternScore = this.analyzeCandlePattern(
-                this.currentAnalysis.candles[this.config.klinesInterval_1]
-            );
+            const shouldCutLosses = profit <= pair.maxStopLoss;
+            const candlePatternScore = this.analyzeCandlePattern(analysis.candles[this.config.klinesInterval_1]);
             const strongSellSignal = shouldSell && profit > 0;
 
             if (shouldTakeProfit || shouldCutLosses || strongSellSignal || candlePatternScore < -0.5) {
-                console.log(`Executing sell for ${this.currentPair.key} (${profit.toFixed(2)}% profit)`);
-                return await this.exchangeManager.placeSellOrder(
-                    this.currentPair, 
-                    lastOrder, 
-                    this.currentPrice
-                );
+                console.log(`Executing sell for ${pair.key} (${profit.toFixed(2)}% profit)`);
+                return await this.exchangeManager.placeSellOrder(pair, lastOrder, currentPrice);
             }
         } 
         else if (lastOrder.side === TradingBot.SELL && shouldBuy) {
-            const minHoldHours = this.config.minReentryDelay;
+            const minHoldHours = this.config.minReentryDelay; //0.2; //reduced from 0.5
             const holdTimeHours = timePassed(new Date(lastOrder.updateTime)) / 3600;
             console.log(`Waiting for new buy order... (${holdTimeHours}h/${minHoldHours}h minimum)`)
             if (holdTimeHours >= minHoldHours) {
                 console.log('Conditions favorable for new buy after cooldown');
-                return await this.exchangeManager.placeBuyOrder(
-                    this.currentPair, 
-                    this.buyInPrice()
-                );
+                return await this.exchangeManager.placeBuyOrder(pair, this.buyInPrice(pair.belowPrice, currentPrice));
             }
         }
     }
 
-    async handlePartialOrder(lastOrder, shouldBuy, shouldSell) {
-        console.log(`Order for ${this.currentPair.key} is partially filled. Filled: ${lastOrder.executedQty}`);
+    async handlePartialOrder(pair, lastOrder, currentPrice, shouldBuy, shouldSell, analysis, orders) {
+        console.log(`Order for ${pair.key} is partially filled. Filled: ${lastOrder.executedQty}`);
         
         const remainingQty = lastOrder.origQty - lastOrder.executedQty;
         console.log(`Remaining quantity: ${remainingQty}`);
         
         if (lastOrder.side === TradingBot.BUY) {
-            const orderPriceDiff = calculateProfit(this.currentPrice, lastOrder.price);
-            if (orderPriceDiff >= this.currentPair.profitMgn || !shouldBuy) {
+            const orderPriceDiff = calculateProfit(currentPrice, lastOrder.price);
+            if (orderPriceDiff >= pair.profitMgn || !shouldBuy) {
                 console.log(`Cancelling buy order (Price diff: ${orderPriceDiff.toFixed(2)}%)`);
-                await this.exchangeManager.cancelAndSellToCurrentPrice(
-                    this.currentPair, 
-                    lastOrder, 
-                    this.currentPrice, 
-                    true
-                );
+                await this.exchangeManager.cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice, true);
             }
         } else if (lastOrder.side === TradingBot.SELL) {
-            const dynamicStop = this.getDynamicStopLoss(lastOrder.price);
-            if (this.currentPrice <= dynamicStop.price) {
+            const dynamicStop = this.getDynamicStopLoss(
+                pair,
+                lastOrder.price,
+                currentPrice,
+                analysis,
+                orders
+            );
+            if (currentPrice <= dynamicStop.price) {
                 console.log(`Stop Loss Triggered at ${dynamicStop.percentage}%`);
-                await this.exchangeManager.cancelAndSellToCurrentPrice(
-                    this.currentPair, 
-                    lastOrder, 
-                    this.currentPrice, 
-                    true
-                );
+                await this.exchangeManager.cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice, true);
             } else if (!shouldSell) {
                 console.log('Conditions no longer favorable for selling');
             }
         }
     }
 
-    async monitorPendingOrder(lastOrder, shouldBuy, shouldSell) {
-        console.log(`Monitoring pending ${lastOrder.side} order for ${this.currentPair.key}`);
+    async monitorPendingOrder(pair, lastOrder, currentPrice, shouldBuy, shouldSell, analysis, orders) {
+        console.log(`Monitoring pending ${lastOrder.side} order for ${pair.key}`);
         
         if (lastOrder.side === TradingBot.SELL) {
-            const dynamicStop = this.getDynamicStopLoss(lastOrder.price);
-            if (this.currentPrice <= dynamicStop.price) {
+            const dynamicStop = this.getDynamicStopLoss(
+                pair,
+                lastOrder.price,
+                currentPrice,
+                analysis, 
+                orders
+            );
+            if (currentPrice <= dynamicStop.price) {
                 console.log(`Stop Loss Hit (${dynamicStop.percentage}%)`);
-                await this.exchangeManager.cancelAndSellToCurrentPrice(
-                    this.currentPair, 
-                    lastOrder, 
-                    this.currentPrice
-                );
+                await this.exchangeManager.cancelAndSellToCurrentPrice(pair, lastOrder, currentPrice);
             }
         } else if (lastOrder.side === TradingBot.BUY) {
-            const orderPriceDiff = calculateProfit(this.currentPrice, lastOrder.price);
-            if (!shouldBuy || orderPriceDiff >= this.currentPair.okDiff) {
+            const orderPriceDiff = calculateProfit(currentPrice, lastOrder.price);
+            if (!shouldBuy || orderPriceDiff >= pair.okDiff) {
                 console.log(`Cancelling Buy Order (Price diff: ${orderPriceDiff.toFixed(2)}%)`);
-                await this.exchangeManager.cancelOrder(this.currentPair, lastOrder);
+                await this.exchangeManager.cancelOrder(pair, lastOrder);
             }
         }
     }
 
-    createPairResult() {
+    createPairResult(pair, indicatorsPrimary, indicatorsSecondary, analysis, orders, currentPrice) {
         return {
-            ...this.currentPair,
+            ...pair,
             indicators: {
-                [this.config.klinesInterval_1]: this.currentIndicatorsPrimary,
-                [this.config.klinesInterval_2]: this.currentIndicatorsSecondary
+                [this.config.klinesInterval_1]: indicatorsPrimary,
+                [this.config.klinesInterval_2]: indicatorsSecondary
             },
-            analysis: this.currentAnalysis,
-            orders: this.currentOrders,
-            currentPrice: this.currentPrice,
-            precisionEntry: this.precisionEntry,
+            analysis,
+            orders,
+            currentPrice,
             date: new Date().toLocaleString()
         };
     }
@@ -474,18 +407,13 @@ class TradingBot {
         const syncedPrimary = ohlcvPrimary.slice(-minLength);
         const syncedSecondary = ohlcvSecondary.slice(-minLength);
 
-        this.currentOhlcvPrimary = syncedPrimary;
-        this.currentOhlcvSecondary = syncedSecondary;
+        const indicatorsPrimary = getIndicators(syncedPrimary);
+        const indicatorsSecondary = getIndicators(syncedSecondary);
 
-        this.currentIndicatorsPrimary = getIndicators(syncedPrimary);
-        this.currentIndicatorsSecondary = getIndicators(syncedSecondary);
-        //
-        this.precisionEntry = this.calculatePrecisionEntry(); 
-        //
-        this.currentAnalysis = MarketAnalyzer.analyzeMultipleTimeframes(
+        const analysis = MarketAnalyzer.analyzeMultipleTimeframes(
             {
-                [this.config.klinesInterval_1]: this.currentIndicatorsPrimary,
-                [this.config.klinesInterval_2]: this.currentIndicatorsSecondary
+                [this.config.klinesInterval_1]: indicatorsPrimary,
+                [this.config.klinesInterval_2]: indicatorsSecondary
             },
             {
                 [this.config.klinesInterval_1]: syncedPrimary,
@@ -502,61 +430,61 @@ class TradingBot {
             }
         );
 
-        this.currentAnalysis.candles = {
+        analysis.candles = {
             [this.config.klinesInterval_1]: syncedPrimary,
             [this.config.klinesInterval_2]: syncedSecondary
         };
 
-        return { 
-            analysis: this.currentAnalysis, 
-            indicatorsPrimary: this.currentIndicatorsPrimary, 
-            indicatorsSecondary: this.currentIndicatorsSecondary 
-        };
+        return { analysis, indicatorsPrimary, indicatorsSecondary };
     }
 
     async processPair(pair) {
         console.log('\x1b[33mProcessing\x1b[0m', pair.key);
-        this.currentPair = pair;
         pair.joinedPair = pair.key.replace('_', '');
 
-        const [ohlcvPrimary, ohlcvSecondary, orders, orderBook] = await this.exchangeManager.fetchPairData(
-            pair,
-            this.config.klinesInterval_1,
-            this.config.klinesInterval_2
-        );
+            const [ohlcvPrimary, ohlcvSecondary, orders, orderBook] = await this.exchangeManager.fetchPairData(
+                pair,
+                this.config.klinesInterval_1,
+                this.config.klinesInterval_2
+            );
 
-        if (ohlcvPrimary.error || ohlcvSecondary.error) {
-            console.error('OHLCV error:', ohlcvPrimary.error || ohlcvSecondary.error);
-            return null;
-        }
+            if (ohlcvPrimary.error || ohlcvSecondary.error) {
+                console.error('OHLCV error:', ohlcvPrimary.error || ohlcvSecondary.error);
+                return null;
+            }
 
-        const lastCandle = ohlcvPrimary[ohlcvPrimary.length - 1];
-        if (!lastCandle || lastCandle.length < 5) {
-            console.error('Price error:');
-            return null;
-        };
+            const lastCandle = ohlcvPrimary[ohlcvPrimary.length - 1];
+            if (!lastCandle || lastCandle.length < 5) {
+                console.error('Price error:');
+                return null;
+            };
 
-        this.currentPrice = lastCandle[4];
-        this.currentOrders = orders || [];
-        this.currentOrderBook = orderBook;
+            const currentPrice = lastCandle[4];
+            const { analysis, indicatorsPrimary, indicatorsSecondary } = this.analyzePairData(
+                ohlcvPrimary,
+                ohlcvSecondary,
+                orderBook
+            );
 
-        const { analysis } = this.analyzePairData(
-            ohlcvPrimary,
-            ohlcvSecondary,
-            orderBook
-        );
+            const normalizedSignal = analysis.consensusSignal.toLowerCase();
+            if (['buy', 'sell', 'strong_buy', 'strong_sell'].includes(normalizedSignal) &&
+                this.config.telegramAlertEnabled) {
+                this.sendGroupChatAlert(pair.key, analysis, currentPrice);
+            }
 
-        const normalizedSignal = analysis.consensusSignal.toLowerCase();
-        if (['buy', 'sell', 'strong_buy', 'strong_sell'].includes(normalizedSignal) &&
-            this.config.telegramAlertEnabled) {
-            this.sendGroupChatAlert();
-        }
+            if (pair.tradeable && currentPrice) {
+                await this.trade(pair, currentPrice, orders || [], analysis);
+            }
 
-        if (pair.tradeable && this.currentPrice) {
-            await this.trade();
-        }
+            return this.createPairResult(
+                pair,
+                indicatorsPrimary,
+                indicatorsSecondary,
+                analysis,
+                orders,
+                currentPrice
+            );
 
-        return this.createPairResult();
     }
 
     async processAllPairs() {

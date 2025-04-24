@@ -91,7 +91,7 @@ class ExchangeManager {
             this.makeQueuedReq(klines, pair.joinedPair, timeframe2),
             pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [], // pair.tradeable ? this.makeQueuedReq(fetchMyOrders, pair.joinedPair) : [],
             //this.makeQueuedReq(tickerPrice, pair.joinedPair)   // pair.tradeable ? this.makeQueuedReq(tickerPrice, pair.joinedPair) : null
-            //this.makeQueuedReq(depth, pair.joinedPair)
+            this.makeQueuedReq(depth, pair.joinedPair)
         ]);
     }
 
@@ -121,7 +121,7 @@ class ExchangeManager {
         ];
     }
 
-    async placeBuyOrder(pair, currentPrice) {
+    async placeBuyOrder(pair, price) {
         console.log(`Placing buy order for ${pair.key}`);
         const balances = await this.getBalances(pair.key);
         const quoteAsset = balances[1];
@@ -133,7 +133,8 @@ class ExchangeManager {
         const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
         const qtyDecimals = this.getDecimals(filters.find(f => f.filterType === 'LOT_SIZE').stepSize);
         
-        const buyPrice = minusPercent(pair.belowPrice, currentPrice).toFixed(priceDecimals);
+        //const buyPrice = minusPercent(pair.belowPrice, currentPrice).toFixed(priceDecimals);
+        const buyPrice = price.toFixed(priceDecimals);
         const qty = (pair.orderQty / buyPrice).toFixed(qtyDecimals);
         const order = await this.makeQueuedReq(placeOrder, pair.joinedPair, 'BUY', 'LIMIT', { price: buyPrice, quantity: qty, timeInForce: 'GTC', newClientOrderId: this.generateOrderId() });
         return order;
@@ -158,7 +159,7 @@ class ExchangeManager {
     //     const order = await this.makeQueuedReq(placeOrder, pair.joinedPair, 'SELL', 'LIMIT', { price: sellPrice, quantity: qty, timeInForce: 'GTC', newClientOrderId: this.generateOrderId() });
     //     return order;
     // }
-    async placeSellOrder(pair, lastOrder) {
+    async placeSellOrder(pair, lastOrder, price) {
         console.log(`Placing sell order for ${pair.key}`);
         const balances = await this.getBalances(pair.key);
         const baseAsset = balances[0];
@@ -169,7 +170,8 @@ class ExchangeManager {
         
         const filters = this.exchangeInfo.symbols.find(symbol => symbol.symbol == pair.joinedPair).filters;
         const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
-        const sellPrice = plusPercent(pair.profitMgn, lastOrder.price).toFixed(priceDecimals);
+        //const sellPrice = plusPercent(pair.profitMgn, lastOrder.price).toFixed(priceDecimals);
+        const sellPrice = Number(price).toFixed(priceDecimals);
         
         const lotSizeFilter = filters.find(f => f.filterType === 'LOT_SIZE');
         const qtyDecimals = this.getDecimals(lotSizeFilter.stepSize);
@@ -249,6 +251,23 @@ class ExchangeManager {
         const step = parseFloat(stepSize);
         const adjusted = Math.floor(qty / step) * step;
         return parseFloat(adjusted.toFixed(decimals));
+    }
+    //
+    async placeSimulatedOrder(pair, side, price, quantity) {
+        // if (!this.config.demoMode) {
+        //     return this.placeRealOrder(pair, side, price, quantity);
+        // }
+        
+        console.log(`[SIMULATED] ${side} order for ${pair.key}`);
+        return {
+            orderId: `sim-${crypto.randomBytes(8).toString('hex')}`,
+            status: 'FILLED',
+            executedQty: quantity,
+            price,
+            side,
+            symbol: pair.joinedPair,
+            transactTime: Date.now()
+        };
     }
 }
 

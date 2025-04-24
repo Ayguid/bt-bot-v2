@@ -1,4 +1,5 @@
 const AnalysisConfig = require('./AnalysisConfig');
+const OrderBookUtils = require('./OrderBookUtils');
 // Timeframe Utility Functions
 const TimeframeUtils = {
     getTimeframeType: (timeframe) => {
@@ -1038,7 +1039,7 @@ class MarketAnalyzer {
         const peakPotential = PriceAnalyzer.predictPeakPotential(candles);
         const bottomPotential = PriceAnalyzer.predictBottomPotential(candles);
         const suggestedBuyInPrice = PriceAnalyzer.calculateSuggestedBuyInPrice(candles);
-
+        
         let priceTrend, potentialMove, confidence = "MEDIUM";
         
         if (earlyTrend?.earlyMomentum && earlyTrend.rocStrength > AnalysisConfig.EARLY_DETECTION.ROC_STRENGTH_THRESHOLD) {
@@ -1121,7 +1122,43 @@ class MarketAnalyzer {
         };
     }
 
-    static shouldBuyOrSell(indicators, candles, analysisWindow, timeframe = '1h') {
+    static analyzeOrderBook(orderBook, currentPrice) {
+        if (!orderBook || currentPrice <= 0) {
+            return {
+                orderBookImbalance: 0,
+                supportLevel: currentPrice * 0.995,
+                resistanceLevel: currentPrice * 1.005,
+                largeBids: [],
+                largeAsks: [],
+                hasSignificantBidWall: false,
+                hasSignificantAskWall: false
+            };
+        }
+        
+        const imbalance = OrderBookUtils.calculateOrderBookImbalance(orderBook);
+        const { support, resistance, supportVolume, resistanceVolume } = 
+            OrderBookUtils.calculateSupportResistanceLevels(orderBook, currentPrice);
+        const { largeBids, largeAsks } = OrderBookUtils.detectLargeOrders(orderBook, currentPrice);
+        
+        // Calculate average volume in the order book for context
+        const allOrders = [...(orderBook.bids || []), ...(orderBook.asks || [])];
+        const avgVolume = allOrders.reduce((sum, order) => sum + parseFloat(order[1]), 0) / Math.max(allOrders.length, 1);
+        
+        return {
+            orderBookImbalance: imbalance,
+            supportLevel: support,
+            resistanceLevel: resistance,
+            largeBids,
+            largeAsks,
+            hasSignificantBidWall: supportVolume > avgVolume * 10,
+            hasSignificantAskWall: resistanceVolume > avgVolume * 10,
+            supportVolume,
+            resistanceVolume,
+            avgOrderBookVolume: avgVolume
+        };
+    }
+
+    static shouldBuyOrSell(indicators, candles, analysisWindow, timeframe = '1h', orderBook = null) {
         if (!analysisWindow) throw new Error("analysisWindow parameter required");
         
         const emptyResult = {
@@ -1186,6 +1223,9 @@ class MarketAnalyzer {
         const resistanceBreak = PatternDetector.detectResistanceBreak(candles, resistanceLevel);
 
         const volumeAnalysis = VolumeAnalyzer.analyze(candles, analysisWindow);
+
+        const orderBookAnalysis = orderBook ? this.analyzeOrderBook(orderBook, currentPrice) : null;
+
         const { buyScore, sellScore } = this.calculateScores({
             candleAnalysis,
             macdAnalysis,
@@ -1202,7 +1242,9 @@ class MarketAnalyzer {
             volumeIncrease,
             supportBreak,
             resistanceBreak,
-            volumeAnalysis
+            volumeAnalysis,
+            orderBookAnalysis,
+            currentPrice
         });
 
         const signal = this.generateSignal(buyScore, sellScore, candleAnalysis.priceTrend, candleAnalysis.earlyTrend);
@@ -1239,7 +1281,8 @@ class MarketAnalyzer {
                 suggestedBuyInPrice: candleAnalysis.suggestedBuyInPrice,
                 supportLevel,
                 resistanceLevel,
-                validationErrors
+                validationErrors,
+                orderBookAnalysis
             }
         };
     }
@@ -1345,12 +1388,14 @@ class MarketAnalyzer {
             volumeIncrease,
             supportBreak,
             resistanceBreak,
-            volumeAnalysis
+            volumeAnalysis,
+            orderBookAnalysis,
+            currentPrice
         } = analysis;
 
         const INDICATOR_WEIGHTS = {
             // Core Crossovers (Highest weight)
-            macdZeroLineBullish: 3.0,      // MACD line crosses above zero
+            macdZeroLineBullish: 2.5,      // MACD line crosses above zero (reduced from 3.0)
             macdZeroLineBearish: 2.5,      // MACD line crosses below zero
             macdSignalLineBullish: 2.0,    // MACD crosses above signal
             macdSignalLineBearish: 2.0,    // MACD crosses below signal
@@ -1363,8 +1408,8 @@ class MarketAnalyzer {
             
             // Strength Indicators (Contextual bonuses)
             macdExtremeBullish: 1.5,       // Strong bullish momentum
-            macdExtremeBearish: 1.5,        // Strong bearish momentum
-            //
+            macdExtremeBearish: 1.5,       // Strong bearish momentum
+            
             stochRSITurning: 0.8,
             stochRSIBullishDivergence: 2.0,
             rsiOversold: 1.2,
@@ -1373,16 +1418,16 @@ class MarketAnalyzer {
             aoBuilding: 1.5,
             aoStrongBuilding: 2.0,
             aoAboveZero: 1.2,
-            gapUp: 1.2,
-            bullishEngulfing: 1.3,
+            gapUp: 1.3,                     // Slightly increased from 1.2
+            bullishEngulfing: 1.5,          // Increased from 1.3
             priceAcceleration: 1.8,
-            volumePattern: 1.1,
-            volumeSpike: 1.5,
-            threeWhiteSoldiers: 1.8,
+            volumePattern: 1.4,             // Increased from 1.1
+            volumeSpike: 1.8,               // Increased from 1.5
+            threeWhiteSoldiers: 2.2,        // Increased from 1.8
             earlyMomentum: 2.5,
             goodPullback: 2.0,
             acceleratingRoc: 1.8,
-            morningStar: 1.8,
+            morningStar: 2.0,               // Increased from 1.8
             rsiOverbought: 2.0,
             rsiFalling: 1.0,
             rsiStrongFalling: 1.3,
@@ -1393,31 +1438,37 @@ class MarketAnalyzer {
             aoFalling: 1.2,
             aoStrongFalling: 1.5,
             priceDeceleration: 1.8,
-            gapDown: 1.5,
-            bearishEngulfing: 1.5,
-            threeBlackCrows: 1.8,
-            eveningStar: 1.5,
-            volumeDivergence: 1.8,
+            gapDown: 1.6,                   // Increased from 1.5
+            bearishEngulfing: 1.7,          // Increased from 1.5
+            threeBlackCrows: 2.2,           // Increased from 1.8
+            eveningStar: 2.0,               // Increased from 1.5
+            volumeDivergence: 2.2,          // Increased from 1.8
             earlyWeakness: 2.0,
             deceleratingRoc: 1.5,
-            volumeCrash: 1.2,
-            supportBreak: 1.5,
-            resistanceBreak: 2.0,
-            adxVeryStrong: 2.5,
+            volumeCrash: 1.4,               // Increased from 1.2
+            supportBreak: 2.2,              // Increased from 1.5
+            resistanceBreak: 2.5,           // Increased from 2.0
+            adxVeryStrong: 2.8,             // Increased from 2.5
             adxStrong: 2.0,
             adxModerate: 1.5,
             adxBullish: 1.5,
             adxBearish: 1.8,
-            adxIncreasing: 1.1,
+            adxIncreasing: 1.2,             // Slightly increased from 1.1
             atrIncreasing: 1.0,
-            atrHighVolatility: 1.2,
+            atrHighVolatility: 1.5,         // Increased from 1.2
             priceAboveEMA: 1.2,
             priceBelowEMA: 1.0,
             emaStrongUp: 1.8,
             emaUp: 1.3,
             emaStrongDown: 1.5,
             emaDown: 1.1,
-            emaDistance: 1.0
+            emaDistance: 1.0,
+            orderBookBullishImbalance: 1.8,
+            orderBookBearishImbalance: 1.8,
+            significantBidWall: 2.2,
+            significantAskWall: 2.2,
+            nearLargeBid: 1.3,
+            nearLargeAsk: 1.3
         };
 
         let buyScore = 0;
@@ -1608,6 +1659,57 @@ class MarketAnalyzer {
             sellScore *= AnalysisConfig.SCORING.TREND_MULTIPLIERS.SIDEWAYS.sell;
         }
 
+        if (orderBookAnalysis) {
+            // Imbalance scoring
+            if (orderBookAnalysis.orderBookImbalance > 0.2) {
+                buyScore += INDICATOR_WEIGHTS.orderBookBullishImbalance;
+            } else if (orderBookAnalysis.orderBookImbalance < -0.2) {
+                sellScore += INDICATOR_WEIGHTS.orderBookBearishImbalance;
+            }
+            
+            // Large orders scoring
+            if (orderBookAnalysis.hasSignificantBidWall) {
+                buyScore += INDICATOR_WEIGHTS.significantBidWall;
+            }
+            if (orderBookAnalysis.hasSignificantAskWall) {
+                sellScore += INDICATOR_WEIGHTS.significantAskWall;
+            }
+            
+            // Proximity to large orders
+            if (orderBookAnalysis.largeBids.length > 0) {
+                const closestBid = orderBookAnalysis.largeBids.reduce((closest, bid) => 
+                    bid.distancePercent < closest.distancePercent ? bid : closest
+                );
+                if (closestBid.distancePercent < 0.5) { // Within 0.5% of price
+                    buyScore += INDICATOR_WEIGHTS.nearLargeBid;
+                }
+            }
+            
+            if (orderBookAnalysis.largeAsks.length > 0) {
+                const closestAsk = orderBookAnalysis.largeAsks.reduce((closest, ask) => 
+                    ask.distancePercent < closest.distancePercent ? ask : closest
+                );
+                if (closestAsk.distancePercent < 0.5) { // Within 0.5% of price
+                    sellScore += INDICATOR_WEIGHTS.nearLargeAsk;
+                }
+            }
+            
+            // Use order book levels to confirm support/resistance
+            if (analysis.supportBreak) {
+                // If order book shows strong support below, this might be a false breakout
+                if (orderBookAnalysis.supportVolume > orderBookAnalysis.avgOrderBookVolume * 5) {
+                    sellScore *= 0.8; // Reduce sell score
+                }
+            }
+            
+            if (analysis.resistanceBreak) {
+                // If order book shows strong resistance above, this might be a false breakout
+                if (orderBookAnalysis.resistanceVolume > orderBookAnalysis.avgOrderBookVolume * 5) {
+                    buyScore *= 0.8; // Reduce buy score
+                }
+            }
+        }
+
         return { 
             buyScore: Math.round(buyScore * 10) / 10, 
             sellScore: Math.round(sellScore * 10) / 10 
@@ -1665,7 +1767,7 @@ class MarketAnalyzer {
         return "HOLD";
     }
 
-    static analyzeMultipleTimeframes(allIndicators, allCandles, options = {}) {
+    static analyzeMultipleTimeframes(allIndicators, allCandles, orderBook, options = {}) {
         if (!allIndicators || !allCandles || typeof allIndicators !== 'object' || typeof allCandles !== 'object') {
             throw new Error('Invalid input: allIndicators and allCandles must be objects');
         }
@@ -1693,7 +1795,7 @@ class MarketAnalyzer {
                 Math.ceil(options.analysisWindow / currentHours)
             );
             
-            const result = this.shouldBuyOrSell(indicators, candles, timeframeWindow, timeframe);
+            const result = this.shouldBuyOrSell(indicators, candles, timeframeWindow, timeframe, orderBook);
             const weight = weights[timeframe] || 1;
             
             const metrics = result.predictiveMetrics || {
