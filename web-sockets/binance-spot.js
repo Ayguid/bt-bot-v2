@@ -83,8 +83,8 @@ const serverTime = () => publicRequest('GET', '/api/v3/time');
 const avgPrice = (pair) => publicRequest('GET', '/api/v3/avgPrice', { symbol: pair });
 const tickerPrice = (pair) => publicRequest('GET', '/api/v3/ticker/price', pair ? { symbol: pair } : {});
 const exchangeInfo = (params) => publicRequest('GET', '/api/v3/exchangeInfo', params);
-const depth = (pair) => publicRequest('GET', '/api/v3/depth', { symbol: pair, limit: 100 });
-const klines = (pair, interval) => publicRequest('GET', '/api/v3/klines', { symbol: pair, interval, limit: 120 });
+const depth = (pair) => publicRequest('GET', '/api/v3/depth', { symbol: pair, limit: 30 });
+const klines = (pair, interval) => publicRequest('GET', '/api/v3/klines', { symbol: pair, interval, limit: 300 });
 
 // Private API Methods
 const fetchMyAccount = () => privateRequest('GET', '/api/v3/account');
