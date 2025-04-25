@@ -6,8 +6,8 @@ const config = {
     printTable: true,
     saveData: false,
     //
-    loopDelay: 200, //delay for the whole pairs array loop
-    pairDelay: 200, //delay between pairs, default is false, just for debuggin
+    loopDelay: 100, //delay for the whole pairs array loop
+    pairDelay: 100, //delay between pairs, default is false, just for debuggin
     alertCooldown: 10 * 60 * 1000, // 10 minutes in milliseconds
     klinesInterval_1: '1h',
     klinesInterval_2: '4h',

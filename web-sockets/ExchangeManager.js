@@ -56,6 +56,10 @@ class ExchangeManager {
     async fetchExchangeInfo() {
         return await this.makeQueuedReq(exchangeInfo);
     }
+    
+    async fetchBalance() {
+        return await this.makeQueuedReq(fetchMyAccount);
+    }
 
     async fetchKlines(pair, interval) {
         return await this.makeQueuedReq(klines, pair, interval);
