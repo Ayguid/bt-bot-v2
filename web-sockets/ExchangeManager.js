@@ -4,14 +4,12 @@ const {
   klines, fetchMyOrders, tickerPrice, userAsset, fetchMyAccount, 
   placeOrder, cancelOrder, cancelAndReplace, exchangeInfo, depth, 
   createListenKey, keepAliveListenKey, closeListenKey 
-} = require('./binance-spot');
-const TimeManager = require('../bot/TimeManager');
+} = require('./binance-rest');
 
 class ExchangeManager {
     constructor(config) {
         this.config = config;
         this.queue = new RateLimitedQueue(1100, 1800, 20);
-        this.timeManager = new TimeManager(this.config, this.makeQueuedReq.bind(this));
         this.exchangeInfo = {};
         this.listenKey = null;
         this.keepAliveInterval = null;
@@ -29,7 +27,6 @@ class ExchangeManager {
             console.log('Fetching exchange information');
             this.exchangeInfo = await this.fetchExchangeInfo();
             console.log('Exchange information loaded');
-            this.timeManager.startTimeCheck();
             console.log('\x1b[42m%s\x1b[0m', 'Exchange Manager initialized successfully');
         } catch (error) {
             console.error('Error initializing Exchange Manager:', error);
@@ -56,13 +53,42 @@ class ExchangeManager {
     async fetchExchangeInfo() {
         return await this.makeQueuedReq(exchangeInfo);
     }
-    
+
+    async getUSDTBalance() {
+        return await this.makeQueuedReq(userAsset, 'USDT');
+    }
+
+    async getSymbolInfo(pair) {
+        if (!this.exchangeInfo.symbols) {
+            await this.fetchExchangeInfo(); // Ensure exchange info is loaded
+        }
+        
+        const symbolInfo = this.exchangeInfo.symbols.find(s => s.symbol === pair);
+        if (!symbolInfo) {
+            throw new Error(`Symbol info not found for ${pair}`);
+        }
+        
+        return {
+            symbol: symbolInfo.symbol,
+            filters: symbolInfo.filters.reduce((acc, filter) => {
+                acc[filter.filterType] = filter;
+                return acc;
+            }, {}),
+            baseAsset: symbolInfo.baseAsset,
+            quoteAsset: symbolInfo.quoteAsset
+        };
+    }
+
     async fetchBalance() {
         return await this.makeQueuedReq(fetchMyAccount);
     }
 
-    async fetchKlines(pair, interval) {
-        return await this.makeQueuedReq(klines, pair, interval);
+    async createOrder(...args) {
+        return await this.makeQueuedReq(placeOrder, ...args);
+    }
+
+    async fetchKlines(...args) {
+        return await this.makeQueuedReq(klines, ...args);
     }
 
     async fetchOrders(pair) {
