@@ -233,7 +233,8 @@ class CandleAnalyzer {
     isGoodTradingTime() {
         const hour = new Date().getUTCHours();
         // Focus on most liquid hours (London/NY overlap, Asian morning)
-        return (hour >= 7 && hour <= 11) || (hour >= 15 && hour <= 19);
+        //return (hour >= 7 && hour <= 11) || (hour >= 15 && hour <= 19);
+        return true; // For testing purposes, always return true
     }
 
     // Composite bullish signal check (optimized for scalping)

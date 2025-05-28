@@ -132,7 +132,10 @@ class ExchangeManager {
         const filters = this.exchangeInfo.symbols.find(symbol => symbol.symbol == pair.joinedPair).filters;
         const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
         const qtyDecimals = this.getDecimals(filters.find(f => f.filterType === 'LOT_SIZE').stepSize);
-        
+        //
+        /*
+        minusPercent(this.precisionEntry || this.currentPair.belowPrice, this.currentPrice);//its done over the bot side,, opuaj
+        */
         //const buyPrice = minusPercent(pair.belowPrice, currentPrice).toFixed(priceDecimals);
         const buyPrice = price.toFixed(priceDecimals);
         const qty = (pair.orderQty / buyPrice).toFixed(qtyDecimals);
@@ -140,25 +143,6 @@ class ExchangeManager {
         return order;
     }
 
-    // async placeSellOrder(pair, lastOrder) {
-    //     console.log(`Placing sell order for ${pair.key}`);
-    //     const balances = await this.getBalances(pair.key);
-    //     const baseAsset = balances[0];
-    //     if (baseAsset.free <= 0) {
-    //         console.warn('Not enough balance to place sell order.');
-    //         return;
-    //     }
-        
-    //     const filters = this.exchangeInfo.symbols.find(symbol => symbol.symbol == pair.joinedPair).filters;
-    //     const priceDecimals = this.getDecimals(filters.find(f => f.filterType === 'PRICE_FILTER').tickSize);
-    //     const sellPrice = plusPercent(pair.profitMgn, lastOrder.price).toFixed(priceDecimals);
-        
-    //     const qtyDecimals = this.getDecimals(filters.find(f => f.filterType === 'LOT_SIZE').stepSize);
-    //     let qty = minusPercent(0.15, lastOrder.executedQty).toFixed(qtyDecimals); //0.1% is the exchange's fee
-
-    //     const order = await this.makeQueuedReq(placeOrder, pair.joinedPair, 'SELL', 'LIMIT', { price: sellPrice, quantity: qty, timeInForce: 'GTC', newClientOrderId: this.generateOrderId() });
-    //     return order;
-    // }
     async placeSellOrder(pair, lastOrder, price) {
         console.log(`Placing sell order for ${pair.key}`);
         const balances = await this.getBalances(pair.key);

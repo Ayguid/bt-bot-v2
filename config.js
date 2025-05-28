@@ -9,11 +9,11 @@ const config = {
     loopDelay: 100, //delay for the whole pairs array loop
     pairDelay: 100, //delay between pairs, default is false, just for debuggin
     alertCooldown: 10 * 60 * 1000, // 10 minutes in milliseconds
-    klinesInterval_1: '1h',
-    klinesInterval_2: '4h',
-    primaryKlines: '1h',
-    analysisWindow: 24, // 24hr trends will be returned
-    minReentryDelay: 0.2,
+    klinesInterval_1: '1h', //1h
+    klinesInterval_2: '4h', //4h
+    primaryKlines: '1h', //1h
+    analysisWindow: 24, // 24 24hr trends will be returned
+    minReentryDelay: 0.05, // 0.2 hours
     //server time diffs
     shouldResynch: false,
     timeCheckInterval: 60000,
