@@ -8,7 +8,7 @@ class PairManager {
     }
     //
     loadPairsFromFile() {
-        //console.log('Loading pairs from file');
+        //console.log('Loading Pairs');
         try {
             const data = fs.readFileSync(this.pairsFile);
             const pairsData = JSON.parse(data);
@@ -18,7 +18,8 @@ class PairManager {
                 profitMgn: 0.5,
                 belowPrice: 0.15,
                 orderQty: 50, // represents second asset in pair, in this case usdt
-                okLoss: -2,
+                okLoss: -0.6,
+                maxStopLoss: -0.7,
                 okDiff: 2,
                 tradeable: true
             }; // Default values for new pairs 
@@ -29,7 +30,8 @@ class PairManager {
                 profitMgn: 0.5,
                 belowPrice: 0.15,
                 orderQty: 50, //_usdt
-                okLoss: -2,
+                okLoss: -0.6,
+                maxStopLoss: -0.7,
                 okDiff: 2,
                 tradeable: true
               },
@@ -38,7 +40,8 @@ class PairManager {
                 profitMgn: 0.5,
                 belowPrice: 0.15,
                 orderQty: 50,
-                okLoss: -2,
+                okLoss: -0.6,
+                maxStopLoss: -0.7,
                 okDiff: 2,
                 tradeable: true
               }]; // Default pairs if file read fails

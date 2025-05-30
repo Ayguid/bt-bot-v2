@@ -11,7 +11,7 @@ class TelegramBotHandler {
 
     initialize() {
         if (!this.config.telegramBotEnabled) {
-            console.log('Telegram bot is disabled via configuration.');
+            console.log('\x1b[33m%s\x1b[0m', 'Telegram bot is disabled via configuration.');
             return; // Do not initialize the bot if disabled
         }
         const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -34,13 +34,13 @@ class TelegramBotHandler {
         await this.tBot.sendMessage(process.env.TELEGRAM_MY_ID, response);
     }
 
-    async sendGroupChatAlert(pair, analysis) {
-        if (!this.config.telegramBotEnabled) {
+    sendGroupChatAlert(pair, analysis, currentPrice) {
+        if (!this.config.telegramAlertEnabled) {
             console.log(`Telegram bot is disabled, not sending alert for ${pair}.`);
             return; // Exit early if the Telegram bot is disabled
         }
         const normalizedSignal = analysis.consensusSignal.toLowerCase();
-        //if (!['buy', 'sell'].includes(normalizedSignal)) return;
+        
         const currentTime = Date.now();
         if (!this.groupChatLastAlertTimes[normalizedSignal]) {
             this.groupChatLastAlertTimes[normalizedSignal] = {};
@@ -49,7 +49,7 @@ class TelegramBotHandler {
         const timeSinceLastAlert = currentTime - lastAlertTime;
         if (timeSinceLastAlert >= this.config.alertCooldown) {
             try {
-                this.tBot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, `${normalizedSignal} signal for ${pair}`);
+                this.tBot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, `${normalizedSignal} signal for ${pair} price: ${currentPrice}`);
                 this.groupChatLastAlertTimes[normalizedSignal][pair] = currentTime;
                 console.log(`Alert sent for ${pair} (${normalizedSignal})`);
             } catch (error) {

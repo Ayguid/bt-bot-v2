@@ -45,10 +45,11 @@ const assetDetail = (pair) => makeApiCall(client.assetDetail, { asset: pair });
 const userAsset = (pair) => makeApiCall(client.userAsset, { asset: pair });
 const klines = (pair, interval) => makeApiCall(client.klines, pair, interval, { limit: 120 });
 const exchangeInfo = (params) => makeApiCall(client.exchangeInfo, params);
+const depth = (pair) => makeApiCall(client.depth, pair, {limit: 100});
 
 module.exports = {
     serverTime, fetchMyAccount, avgPrice, tickerPrice, fetchMyOrders, fetchMyTrades,
-    placeOrder, getOrder, cancelOrder, cancelAndReplace, assetDetail, userAsset, klines, exchangeInfo
+    placeOrder, getOrder, cancelOrder, cancelAndReplace, assetDetail, userAsset, klines, exchangeInfo, depth
 };
 
 

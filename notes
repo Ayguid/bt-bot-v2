@@ -1,0 +1,18 @@
+overallPriceChange:
+(lastClose - firstOpen) / firstOpen * 100
+What it measures:
+The total percentage change from the first candle's open price to the last candle's close price across the entire analysis window
+Shows the net movement over the complete period
+Use case:
+Best for understanding the "big picture" trend over the entire timeframe
+Useful for identifying whether the overall movement was up/down regardless of volatility
+
+avgPriceChange:
+What it measures:
+The average of percentage changes between consecutive closes
+Shows the typical step-by-step movement
+Use case:
+Better for understanding the consistency/smoothness of the trend
+Reveals whether price moved steadily or with high volatility
+
+

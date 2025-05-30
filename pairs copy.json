@@ -18,7 +18,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "BEAMXUSDT"
   },
   {
@@ -33,7 +33,7 @@
     "joinedPair": "ENJUSDT"
   },
   {
-    "key": "SOL_USDT",
+    "key": "FET_USDT",
     "orderQty": 50,
     "profitMgn": 1.5,
     "belowPrice": 0.2,
@@ -41,7 +41,7 @@
     "maxStopLoss": -4,
     "okDiff": 2,
     "tradeable": false,
-    "joinedPair": "SOLUSDT"
+    "joinedPair": "FETUSDT"
   },
   {
     "key": "NIL_USDT",
@@ -51,7 +51,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "NILUSDT"
   },
   {
@@ -73,7 +73,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "DOGEUSDT"
   },
   {
@@ -84,7 +84,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "GUNUSDT"
   },
   {
@@ -95,7 +95,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "STRAXUSDT"
   },
   {
@@ -117,7 +117,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "ARKUSDT"
   },
   {
@@ -128,7 +128,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "TURBOUSDT"
   },
   {
@@ -150,7 +150,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "FORTHUSDT"
   },
   {
@@ -161,7 +161,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "DGBUSDT"
   },
   {
@@ -183,7 +183,7 @@
     "okLoss": -2,
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "FUNUSDT"
   },
   {
@@ -194,7 +194,7 @@
     "okLoss": -2,    
     "maxStopLoss": -4,
     "okDiff": 2,
-    "tradeable": false,
+    "tradeable": true,
     "joinedPair": "PIXELUSDT"
   }
 ]
