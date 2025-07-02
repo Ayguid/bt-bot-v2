@@ -2,7 +2,6 @@ const TechnicalIndicators = require('technicalindicators');
 
 class CandleAnalyzer {
     constructor(timeframe = '1h') {
-        // Configurable based on timeframe
         this.timeframe = timeframe;
         this.config = this.getConfigurationForTimeframe(timeframe);
         
@@ -16,51 +15,53 @@ class CandleAnalyzer {
         };
     }
 
-    getConfigurationForTimeframe(timeframe) {
-        const baseConfig = {
-            emaPeriods: { 
-                fast: 9,       // Fast EMA period
-                medium: 21,    // Medium EMA period
-                slow: 50       // Slow EMA period
-            },
-            rsiPeriod: 14,     // Standard RSI lookback
-            bbands: {
-                period: 20,    // Standard Bollinger Band setting
-                stdDev: 2      // Standard deviation width
-            },
-            volumeEmaPeriod: 20, // Volume smoothing period
-            volumeSpikeMultiplier: 2.0, // Volume spike threshold
-            buyingPressureLookback: 4, // Candles to check for buying pressure
-            buyingPressureThreshold: 0.75 // % of candles needed to confirm
-        };
+getConfigurationForTimeframe(timeframe) {
+    const baseConfig = {
+        emaPeriods: { 
+            fast: 9,       // Fast EMA period
+            medium: 21,    // Medium EMA period
+            slow: 50       // Slow EMA period
+        },
+        rsiPeriod: 14,     // Standard RSI lookback
+        bbands: {
+            period: 20,    // Standard Bollinger Band setting
+            stdDev: 2      // Standard deviation width
+        },
+        volumeEmaPeriod: 20, // Volume smoothing period
+        volumeSpikeMultiplier: 1.8, // Lowered from 2.0 (more sensitive)
+        buyingPressureLookback: 4, // Candles to check for buying pressure
+        buyingPressureThreshold: 0.6 // Lowered from 0.75 (easier to trigger)
+    };
 
-        // Adjust parameters based on timeframe
-        switch(timeframe) {
-            case '15m':
-                return {
-                    ...baseConfig,
-                    emaPeriods: { fast: 5, medium: 13, slow: 34 },
-                    volumeSpikeMultiplier: 2.5,
-                    buyingPressureLookback: 8
-                };
-            case '4h':
-                return {
-                    ...baseConfig,
-                    emaPeriods: { fast: 13, medium: 34, slow: 89 },
-                    volumeSpikeMultiplier: 1.8,
-                    buyingPressureLookback: 3
-                };
-            case '1d':
-                return {
-                    ...baseConfig,
-                    emaPeriods: { fast: 21, medium: 50, slow: 200 },
-                    volumeSpikeMultiplier: 1.5,
-                    buyingPressureLookback: 2
-                };
-            default: // 1h
-                return baseConfig;
-        }
+    switch(timeframe) {
+        case '15m':
+            return {
+                ...baseConfig,
+                emaPeriods: { fast: 5, medium: 13, slow: 34 },
+                volumeSpikeMultiplier: 2.0, // Originally 2.5
+                buyingPressureLookback: 8,
+                buyingPressureThreshold: 0.55 // More sensitive for shorter TF
+            };
+        case '4h':
+            return {
+                ...baseConfig,
+                emaPeriods: { fast: 13, medium: 34, slow: 89 },
+                volumeSpikeMultiplier: 1.6, // Originally 1.8
+                buyingPressureLookback: 3,
+                buyingPressureThreshold: 0.65 // Slightly less sensitive
+            };
+        case '1d':
+            return {
+                ...baseConfig,
+                emaPeriods: { fast: 21, medium: 50, slow: 200 },
+                volumeSpikeMultiplier: 1.4, // Originally 1.5
+                buyingPressureLookback: 2,
+                buyingPressureThreshold: 0.7 // Less sensitive for daily
+            };
+        default: // 1h
+            return baseConfig;
     }
+}
 
     _getCandleProp(candle, prop) {
         return candle[this.CANDLE_INDEX[prop.toUpperCase()]];
@@ -184,15 +185,11 @@ class CandleAnalyzer {
                 volumeSpike: this._hasVolumeSpike(candles, volumeEMA),
                 trendConfirmed: this._isTrendConfirmed(candles, slowEMA),
                 isBullish: this._hasEMABullishCross(fastEMA, mediumEMA) && 
-                          this.hasBuyingPressure(candles) && 
-                          this._hasVolumeSpike(candles, volumeEMA) &&
                           this._isTrendConfirmed(candles, slowEMA),
 
                 // Bearish signals
                 emaBearishCross: this._hasEMABearishCross(fastEMA, mediumEMA),
                 isBearish: this._hasEMABearishCross(fastEMA, mediumEMA) && 
-                          !this.hasBuyingPressure(candles) && 
-                          this._hasVolumeSpike(candles, volumeEMA) &&
                           !this._isTrendConfirmed(candles, slowEMA),
 
                 // RSI conditions

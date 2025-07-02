@@ -162,7 +162,7 @@ class ExchangeManager {
 
     connectDepthSocket(pair) {
         return new Promise((resolve, reject) => {
-            const depthWsUrl = `${this.wsBaseUrl}/ws/${pair.toLowerCase()}@depth20@100ms`;
+            const depthWsUrl = `${this.wsBaseUrl}/ws/${pair.toLowerCase()}@depth50@100ms`;
             const depthWs = new WebSocket(depthWsUrl);
     
             depthWs.on('open', () => {

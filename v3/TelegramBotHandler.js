@@ -31,12 +31,12 @@ class TelegramBotHandler {
         
         const action = signal === 'long' ? '🟢 LONG' : '🔴 SHORT';
         const message = `
-${action} SIGNAL
-──────────────
-Pair: ${pair}
-Price: ${price.toFixed(pair.includes('BTC') ? 2 : 6)}
-Time: ${new Date().toLocaleString()}
-`;
+            ${action} SIGNAL
+            ──────────────
+            Pair: ${pair}
+            Price: ${price.toFixed(pair.includes('BTC') ? 2 : 6)}
+            Time: ${new Date().toLocaleString()}
+            `;
         try {
             this.bot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, message);
             this.lastAlertTimes[pair] = now;

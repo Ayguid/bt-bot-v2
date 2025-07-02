@@ -214,8 +214,10 @@ class OrderBookAnalyzer {
             return signals.resistanceDetected ? 'strong_sell' : 'sell';
         }
         if (signals.volumeSpike) {
-            return signals.pricePressure.includes('up') ? 'buy' : 
-                  signals.pricePressure.includes('down') ? 'sell' : 'neutral';
+            if (signals.pricePressure === 'strong_up') return 'buy';
+            if (signals.pricePressure === 'strong_down') return 'sell';
+            if (signals.pricePressure === 'up') return 'weak_buy';
+            if (signals.pricePressure === 'down') return 'weak_sell';
         }
         return 'neutral';
     }
