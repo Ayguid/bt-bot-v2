@@ -15,53 +15,53 @@ class CandleAnalyzer {
         };
     }
 
-getConfigurationForTimeframe(timeframe) {
-    const baseConfig = {
-        emaPeriods: { 
-            fast: 9,       // Fast EMA period
-            medium: 21,    // Medium EMA period
-            slow: 50       // Slow EMA period
-        },
-        rsiPeriod: 14,     // Standard RSI lookback
-        bbands: {
-            period: 20,    // Standard Bollinger Band setting
-            stdDev: 2      // Standard deviation width
-        },
-        volumeEmaPeriod: 20, // Volume smoothing period
-        volumeSpikeMultiplier: 1.8, // Lowered from 2.0 (more sensitive)
-        buyingPressureLookback: 4, // Candles to check for buying pressure
-        buyingPressureThreshold: 0.6 // Lowered from 0.75 (easier to trigger)
-    };
+    getConfigurationForTimeframe(timeframe) {
+        const baseConfig = {
+            emaPeriods: { 
+                fast: 8,       // Changed from 9
+                medium: 20,    // Changed from 21
+                slow: 50       // Kept same
+            },
+            rsiPeriod: 14,
+            bbands: {
+                period: 20,
+                stdDev: 2
+            },
+            volumeEmaPeriod: 20,
+            volumeSpikeMultiplier: 1.8,
+            buyingPressureLookback: 4,
+            buyingPressureThreshold: 0.55 // Lowered from 0.6 for more sensitivity
+        };
 
-    switch(timeframe) {
-        case '15m':
-            return {
-                ...baseConfig,
-                emaPeriods: { fast: 5, medium: 13, slow: 34 },
-                volumeSpikeMultiplier: 2.0, // Originally 2.5
-                buyingPressureLookback: 8,
-                buyingPressureThreshold: 0.55 // More sensitive for shorter TF
-            };
-        case '4h':
-            return {
-                ...baseConfig,
-                emaPeriods: { fast: 13, medium: 34, slow: 89 },
-                volumeSpikeMultiplier: 1.6, // Originally 1.8
-                buyingPressureLookback: 3,
-                buyingPressureThreshold: 0.65 // Slightly less sensitive
-            };
-        case '1d':
-            return {
-                ...baseConfig,
-                emaPeriods: { fast: 21, medium: 50, slow: 200 },
-                volumeSpikeMultiplier: 1.4, // Originally 1.5
-                buyingPressureLookback: 2,
-                buyingPressureThreshold: 0.7 // Less sensitive for daily
-            };
-        default: // 1h
-            return baseConfig;
+        switch(timeframe) {
+            case '15m':
+                return {
+                    ...baseConfig,
+                    emaPeriods: { fast: 5, medium: 13, slow: 34 },
+                    volumeSpikeMultiplier: 2.0,
+                    buyingPressureLookback: 8,
+                    buyingPressureThreshold: 0.5
+                };
+            case '4h':
+                return {
+                    ...baseConfig,
+                    emaPeriods: { fast: 13, medium: 34, slow: 89 },
+                    volumeSpikeMultiplier: 1.6,
+                    buyingPressureLookback: 3,
+                    buyingPressureThreshold: 0.6
+                };
+            case '1d':
+                return {
+                    ...baseConfig,
+                    emaPeriods: { fast: 21, medium: 50, slow: 200 },
+                    volumeSpikeMultiplier: 1.4,
+                    buyingPressureLookback: 2,
+                    buyingPressureThreshold: 0.65
+                };
+            default: // 1h
+                return baseConfig;
+        }
     }
-}
 
     _getCandleProp(candle, prop) {
         return candle[this.CANDLE_INDEX[prop.toUpperCase()]];
@@ -104,9 +104,18 @@ getConfigurationForTimeframe(timeframe) {
         if (!candles || candles.length < lookback) return false;
         
         const recent = candles.slice(-lookback);
-        return recent.filter(c => 
+        const bullishCount = recent.filter(c => 
             this._getCandleProp(c, 'close') > this._getCandleProp(c, 'open')
-        ).length >= Math.ceil(lookback * this.config.buyingPressureThreshold);
+        ).length;
+        
+        // More nuanced buying pressure detection
+        const volumeWeighted = recent.reduce((sum, c) => {
+            const isBullish = this._getCandleProp(c, 'close') > this._getCandleProp(c, 'open');
+            return sum + (isBullish ? this._getCandleProp(c, 'volume') : 0);
+        }, 0) / recent.reduce((sum, c) => sum + this._getCandleProp(c, 'volume'), 0);
+        
+        return bullishCount >= Math.ceil(lookback * this.config.buyingPressureThreshold) ||
+               volumeWeighted > 0.65;
     }
 
     _hasEMABullishCross(fastEMA, mediumEMA) {
@@ -123,8 +132,14 @@ getConfigurationForTimeframe(timeframe) {
 
     _hasVolumeSpike(candles, volumeEMA) {
         if (!candles.length || !volumeEMA.length) return false;
-        return this._getCandleProp(candles.slice(-1)[0], 'volume') > 
-               volumeEMA.slice(-1)[0] * this.config.volumeSpikeMultiplier;
+        const currentVolume = this._getCandleProp(candles.slice(-1)[0], 'volume');
+        return currentVolume > volumeEMA.slice(-1)[0] * this.config.volumeSpikeMultiplier ||
+               currentVolume > 2 * this.calculateAverageVolume(candles.slice(-10));
+    }
+
+    calculateAverageVolume(candles) {
+        if (!candles.length) return 0;
+        return candles.reduce((sum, c) => sum + this._getCandleProp(c, 'volume'), 0) / candles.length;
     }
 
     _isTrendConfirmed(candles, slowEMA) {
@@ -153,7 +168,7 @@ getConfigurationForTimeframe(timeframe) {
             ? bbands[bbands.length - 1].upper 
             : bbands[bbands.length - 1].lower;
         
-        return Math.abs(lastClose - lastBand) / lastBand < 0.01; // Within 1%
+        return Math.abs(lastClose - lastBand) / lastBand < 0.01;
     }
 
     getAllSignals(candles) {

@@ -3,7 +3,7 @@ class OrderBookAnalyzer {
         this.config = {
             depthLevels: 20,
             volumeThreshold: 0.2,
-            imbalanceThreshold: 1.5,
+            imbalanceThreshold: 1.8,  // Increased from 1.5 for better signal quality
             clusterThreshold: 0.001,
             spikeThreshold: 3.0,
             priceChangeThreshold: 0.0001,
@@ -207,18 +207,32 @@ class OrderBookAnalyzer {
     }
 
     generateCompositeSignal(signals, metrics, candles) {
-        if (signals.strongBidImbalance) {
-            return signals.supportDetected ? 'strong_buy' : 'buy';
+        // Strong buy signals
+        if (signals.strongBidImbalance && signals.supportDetected) {
+            return 'strong_buy';
         }
-        if (signals.strongAskImbalance) {
-            return signals.resistanceDetected ? 'strong_sell' : 'sell';
+        
+        // Strong sell signals
+        if (signals.strongAskImbalance && signals.resistanceDetected) {
+            return 'strong_sell';
         }
+        
+        // Volume-based signals
         if (signals.volumeSpike) {
             if (signals.pricePressure === 'strong_up') return 'buy';
             if (signals.pricePressure === 'strong_down') return 'sell';
             if (signals.pricePressure === 'up') return 'weak_buy';
             if (signals.pricePressure === 'down') return 'weak_sell';
         }
+        
+        // Wall-based signals
+        if (signals.bidWalls.length > 0 && !signals.askWalls.length) {
+            return 'weak_buy';
+        }
+        if (signals.askWalls.length > 0 && !signals.bidWalls.length) {
+            return 'weak_sell';
+        }
+        
         return 'neutral';
     }
 }

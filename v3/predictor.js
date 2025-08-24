@@ -5,7 +5,7 @@ const TelegramBotHandler = require('./TelegramBotHandler');
 const { wait } = require('../utils/helpers');
 
 const config = {
-    tradingPairs: ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'HFTUSDT', 'NEIROUSDT', 'BANANAS31USDT'],
+    tradingPairs: ['BTCUSDT', 'ETHUSDT', 'FETUSDT', 'BIOUSDT', 'BANANAS31USDT', 'MEMEUSDT'],
     timeframe: '1h',
     maxCandles: 120,
     analysisInterval: 1000,
@@ -113,16 +113,6 @@ class BinancePredictiveBot {
                 this.analyzers.candle.getAllSignals(candles)
             ]);
 
-            //console.log(`Analyzing ${symbol}...`);
-            // console.log('Candle Signals:', {
-            //     isBullish: candleAnalysis.isBullish,
-            //     emaBullishCross: candleAnalysis.emaBullishCross,
-            //     buyingPressure: candleAnalysis.buyingPressure,
-            //     volumeSpike: candleAnalysis.volumeSpike,
-            //     trendConfirmed: candleAnalysis.trendConfirmed
-            // });
-            // console.log('Order Book Signals:', obAnalysis.signals);
-
             const compositeSignal = this.determineCompositeSignal(candleAnalysis, obAnalysis.signals, candles);
             const suggestedPrices = this.calculateSuggestedPrices(orderBook, candles, compositeSignal, candleAnalysis);
 
@@ -158,27 +148,42 @@ class BinancePredictiveBot {
     }
 
     determineCompositeSignal(candleSignals, obSignals, candles) {
-        // First check the strongest signals
-        if (candleSignals.emaBullishCross && obSignals.compositeSignal.includes('buy')) {
+        // First check strong bullish confluence
+        const isUptrend = candleSignals.emaFast > candleSignals.emaMedium && 
+                         candleSignals.emaMedium > candleSignals.emaSlow;
+        
+        const lastCandle = candles[candles.length - 1];
+        const lastVolume = this.analyzers.candle._getCandleProp(lastCandle, 'volume');
+        const isHighVolume = candleSignals.volumeSpike || 
+                           lastVolume > candleSignals.volumeEMA * 1.5;
+
+        // Strong bullish case
+        if ((candleSignals.emaBullishCross || candleSignals.buyingPressure) && 
+            (obSignals.compositeSignal.includes('buy') || obSignals.pricePressure.includes('up'))) {
             return 'long';
         }
-        if (candleSignals.emaBearishCross && obSignals.compositeSignal.includes('sell')) {
+        
+        // Multiple confirmations case
+        if (candleSignals.buyingPressure && isHighVolume && !candleSignals.isOverbought) {
+            return 'long';
+        }
+
+        // Uptrend continuation
+        if (isUptrend && candleSignals.buyingPressure && obSignals.pricePressure.includes('up')) {
+            return 'long';
+        }
+
+        // Bearish cases (more strict)
+        if (candleSignals.emaBearishCross && 
+            obSignals.compositeSignal.includes('sell') && 
+            candleSignals.isOverbought) {
             return 'short';
         }
 
-        // Then check weaker but still valid signals
-        if (candleSignals.isBullish && obSignals.pricePressure.includes('up')) {
-            return 'long';
-        }
-        if (candleSignals.isBearish && obSignals.pricePressure.includes('down')) {
-            return 'short';
-        }
-
-        // Then check overbought/oversold conditions
+        // Original conditions for other signals
         if (candleSignals.isOverbought) return 'overbought';
         if (candleSignals.isOversold) return 'oversold';
 
-        // Finally potential reversals
         const priceTrend = this.getPriceTrend(candles, 8);
         if (candleSignals.nearUpperBand && priceTrend === 'strong_up') {
             return 'potential_reversal';
@@ -199,33 +204,33 @@ class BinancePredictiveBot {
         return 'neutral';
     }
 
-calculateSuggestedPrices(orderBook, candles, signal, candleAnalysis) {
-    const currentPrice = candles[candles.length - 1][4];
-    const bestBid = orderBook.bids[0]?.[0] || currentPrice;
-    const bestAsk = orderBook.asks[0]?.[0] || currentPrice;
-    const bb = candleAnalysis.bollingerBands;
-    const useBollingerBands = bb && bb.upper && bb.lower;
-    
-    if (signal === 'long') {
+    calculateSuggestedPrices(orderBook, candles, signal, candleAnalysis) {
+        const currentPrice = candles[candles.length - 1][4];
+        const bestBid = orderBook.bids[0]?.[0] || currentPrice;
+        const bestAsk = orderBook.asks[0]?.[0] || currentPrice;
+        const bb = candleAnalysis.bollingerBands;
+        const useBollingerBands = bb && bb.upper && bb.lower;
+        
+        if (signal === 'long') {
+            return {
+                entry: bestAsk,
+                stopLoss: useBollingerBands ? bb.lower * 0.998 : bestBid * 0.998,
+                takeProfit: useBollingerBands ? bb.upper * 0.995 : bestAsk * 1.005
+            };
+        }
+        if (signal === 'short') {
+            return {
+                entry: bestBid,
+                stopLoss: useBollingerBands ? bb.upper * 1.002 : bestAsk * 1.002,
+                takeProfit: useBollingerBands ? bb.lower * 0.995 : bestBid * 0.995
+            };
+        }
         return {
-            entry: bestAsk,
-            stopLoss: useBollingerBands ? bb.lower * 0.998 : bestBid * 0.998,
-            takeProfit: useBollingerBands ? bb.upper * 0.995 : bestAsk * 1.005
+            entry: null,
+            stopLoss: null,
+            takeProfit: null
         };
     }
-    if (signal === 'short') {
-        return {
-            entry: bestBid,
-            stopLoss: useBollingerBands ? bb.upper * 1.002 : bestAsk * 1.002,
-            takeProfit: useBollingerBands ? bb.lower * 0.995 : bestBid * 0.995 // Fixed multiplier
-        };
-    }
-    return {
-        entry: null,
-        stopLoss: null,
-        takeProfit: null
-    };
-}
 
     async runAnalysis() {
         this.isRunning = true;
