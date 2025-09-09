@@ -22,21 +22,32 @@ class TelegramBotHandler {
         console.log('Telegram bot initialized and polling started.');
     }
 
-    sendAlert(pair, signal, price) {
+    sendAlert(pair, signal, entryPrice, stopLoss, takeProfit) {
         if (!this.config.telegramBotEnabled) return;
         if (!this.config.alertSignals.includes(signal)) return;
         const now = Date.now();
         const lastAlert = this.lastAlertTimes[pair] || 0;
         if (now - lastAlert < this.config.alertCooldown) return;
         
+        // Calculate risk-reward metrics
+        const riskPct = Math.abs((entryPrice - stopLoss) / entryPrice * 100);
+        const rewardPct = Math.abs((takeProfit - entryPrice) / entryPrice * 100);
+        const rrRatio = (rewardPct / riskPct).toFixed(2);
+        
         const action = signal === 'long' ? '🟢 LONG' : '🔴 SHORT';
+        const pricePrecision = pair.includes('BTC') ? 2 : 6;
+        
         const message = `
-            ${action} SIGNAL
-            ──────────────
-            Pair: ${pair}
-            Price: ${price.toFixed(pair.includes('BTC') ? 2 : 6)}
-            Time: ${new Date().toLocaleString()}
-            `;
+${action} SIGNAL
+──────────────
+📊 Pair: ${pair}
+💰 Entry: $${entryPrice.toFixed(pricePrecision)}
+🛑 Stop Loss: $${stopLoss.toFixed(pricePrecision)} (${riskPct.toFixed(2)}%)
+🎯 Take Profit: $${takeProfit.toFixed(pricePrecision)} (${rewardPct.toFixed(2)}%)
+⚖️ Risk/Reward: ${rrRatio}:1
+⏰ Time: ${new Date().toLocaleString()}
+        `.trim();
+        
         try {
             this.bot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, message);
             this.lastAlertTimes[pair] = now;

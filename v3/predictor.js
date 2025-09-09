@@ -5,14 +5,19 @@ const TelegramBotHandler = require('./TelegramBotHandler');
 const { wait } = require('../utils/helpers');
 
 const config = {
-    tradingPairs: ['BTCUSDT', 'ETHUSDT', 'FETUSDT', 'BIOUSDT', 'BANANAS31USDT', 'MEMEUSDT'],
+    tradingPairs: ['BTCUSDT', 'ETHUSDT', 'FETUSDT', 'BIOUSDT', 'BANANAS31USDT'],
     timeframe: '1h',
     maxCandles: 120,
     analysisInterval: 1000,
     reconnectInterval: 5000,
     telegramBotEnabled: true,
     alertCooldown: 3600000,
-    alertSignals: ['long', 'short']
+    alertSignals: ['long', 'short'],
+    riskManagement: {
+        stopLossPercent: 0.02, // 2% stop loss
+        riskRewardRatio: 2,    // 2:1 risk-reward ratio
+        useBollingerBands: false // Option to toggle between methods
+    }
 };
 
 class BinancePredictiveBot {
@@ -117,7 +122,13 @@ class BinancePredictiveBot {
             const suggestedPrices = this.calculateSuggestedPrices(orderBook, candles, compositeSignal, candleAnalysis);
 
             if (compositeSignal === 'long' || compositeSignal === 'short') {
-                this.telegramBotHandler.sendAlert(symbol, compositeSignal, suggestedPrices.entry);
+                this.telegramBotHandler.sendAlert(
+                    symbol, 
+                    compositeSignal, 
+                    suggestedPrices.entry,
+                    suggestedPrices.stopLoss, 
+                    suggestedPrices.takeProfit
+                );
             }
 
             return {
@@ -209,29 +220,60 @@ class BinancePredictiveBot {
         const bestBid = orderBook.bids[0]?.[0] || currentPrice;
         const bestAsk = orderBook.asks[0]?.[0] || currentPrice;
         const bb = candleAnalysis.bollingerBands;
-        const useBollingerBands = bb && bb.upper && bb.lower;
-        
+        const { stopLossPercent, riskRewardRatio, useBollingerBands } = this.config.riskManagement;
+    
         if (signal === 'long') {
-            return {
-                entry: bestAsk,
-                stopLoss: useBollingerBands ? bb.lower * 0.998 : bestBid * 0.998,
-                takeProfit: useBollingerBands ? bb.upper * 0.995 : bestAsk * 1.005
-            };
+            if (useBollingerBands && bb && bb.upper && bb.lower) {
+                // Bollinger Bands approach (fixed)
+                return {
+                    entry: bestAsk,
+                    stopLoss: bb.lower * 0.998,
+                    takeProfit: bb.upper * 1.002
+                };
+            } else {
+                // Risk-reward ratio approach (recommended)
+                const entryPrice = bestAsk;
+                const stopLossPrice = entryPrice * (1 - stopLossPercent);
+                const riskAmount = entryPrice - stopLossPrice;
+                const takeProfitPrice = entryPrice + (riskAmount * riskRewardRatio);
+                
+                return {
+                    entry: entryPrice,
+                    stopLoss: stopLossPrice,
+                    takeProfit: takeProfitPrice
+                };
+            }
         }
+        
         if (signal === 'short') {
-            return {
-                entry: bestBid,
-                stopLoss: useBollingerBands ? bb.upper * 1.002 : bestAsk * 1.002,
-                takeProfit: useBollingerBands ? bb.lower * 0.995 : bestBid * 0.995
-            };
+            if (useBollingerBands && bb && bb.upper && bb.lower) {
+                // Bollinger Bands approach
+                return {
+                    entry: bestBid,
+                    stopLoss: bb.upper * 1.002,
+                    takeProfit: bb.lower * 0.998
+                };
+            } else {
+                // Risk-reward ratio approach
+                const entryPrice = bestBid;
+                const stopLossPrice = entryPrice * (1 + stopLossPercent);
+                const riskAmount = stopLossPrice - entryPrice;
+                const takeProfitPrice = entryPrice - (riskAmount * riskRewardRatio);
+                
+                return {
+                    entry: entryPrice,
+                    stopLoss: stopLossPrice,
+                    takeProfit: takeProfitPrice
+                };
+            }
         }
+        
         return {
             entry: null,
             stopLoss: null,
             takeProfit: null
         };
     }
-
     async runAnalysis() {
         this.isRunning = true;
         while (this.isRunning) {
@@ -257,15 +299,17 @@ class BinancePredictiveBot {
             green: (text) => `\x1b[32m${text}\x1b[0m`,
             red: (text) => `\x1b[31m${text}\x1b[0m`,
             yellow: (text) => `\x1b[33m${text}\x1b[0m`,
-            cyan: (text) => `\x1b[36m${text}\x1b[0m`
+            cyan: (text) => `\x1b[36m${text}\x1b[0m`,
+            magenta: (text) => `\x1b[35m${text}\x1b[0m`
         };
         const now = new Date();
         console.log(`\n=== MARKET ANALYSIS (${now.toLocaleTimeString()}) ===\n`);
+        
         results.forEach(result => {
             const { symbol, currentPrice, signals, suggestedPrices, indicators } = result;
             let signalDisplay = signals.compositeSignal.toUpperCase();
-            if (signals.compositeSignal.includes('bullish')) signalDisplay = color.green(signalDisplay);
-            if (signals.compositeSignal.includes('bearish')) signalDisplay = color.red(signalDisplay);
+            if (signals.compositeSignal.includes('long')) signalDisplay = color.green(signalDisplay);
+            if (signals.compositeSignal.includes('short')) signalDisplay = color.red(signalDisplay);
             if (signals.compositeSignal.includes('over')) signalDisplay = color.yellow(signalDisplay);
             
             console.log(`${color.cyan(symbol.padEnd(8))} $ ${currentPrice.toFixed(symbol === 'BTCUSDT' ? 2 : 6)} | ${signalDisplay}`);
@@ -293,12 +337,20 @@ class BinancePredictiveBot {
                 const entry = signals.compositeSignal === 'long' 
                     ? color.green(`${signals.compositeSignal.toUpperCase()} $ ${suggestedPrices.entry.toFixed(symbol === 'BTCUSDT' ? 2 : 6)}`) 
                     : color.red(`${signals.compositeSignal.toUpperCase()} $ ${suggestedPrices.entry.toFixed(symbol === 'BTCUSDT' ? 2 : 6)}`);
+                
+                // Calculate risk-reward details
+                const riskPct = Math.abs((suggestedPrices.entry - suggestedPrices.stopLoss) / suggestedPrices.entry * 100);
+                const rewardPct = Math.abs((suggestedPrices.takeProfit - suggestedPrices.entry) / suggestedPrices.entry * 100);
+                const rrRatio = (rewardPct / riskPct).toFixed(2);
+                
                 console.log(`  ${entry}`);
-                console.log(`  SL: ${color.yellow(suggestedPrices.stopLoss.toFixed(symbol === 'BTCUSDT' ? 2 : 6))} | TP: ${color.green(suggestedPrices.takeProfit.toFixed(symbol === 'BTCUSDT' ? 2 : 6))}`);
+                console.log(`  SL: ${color.yellow(suggestedPrices.stopLoss.toFixed(symbol === 'BTCUSDT' ? 2 : 6))} (${riskPct.toFixed(2)}%)`);
+                console.log(`  TP: ${color.green(suggestedPrices.takeProfit.toFixed(symbol === 'BTCUSDT' ? 2 : 6))} (${rewardPct.toFixed(2)}%)`);
+                console.log(`  R/R: ${color.magenta(rrRatio + ':1')}`);
             }
-            console.log('-'.repeat(60));
+            console.log('-'.repeat(80));
         });
-        console.log('='.repeat(60) + '\n');
+        console.log('='.repeat(80) + '\n');
     }
 
     async shutdown() {
