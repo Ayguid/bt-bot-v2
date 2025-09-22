@@ -3,7 +3,7 @@ class OrderBookAnalyzer {
         this.config = {
             depthLevels: 20,
             volumeThreshold: 0.2,
-            imbalanceThreshold: 1.8,  // Increased from 1.5 for better signal quality
+            imbalanceThreshold: 1.8,
             clusterThreshold: 0.001,
             spikeThreshold: 3.0,
             priceChangeThreshold: 0.0001,

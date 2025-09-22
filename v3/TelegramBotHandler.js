@@ -22,32 +22,54 @@ class TelegramBotHandler {
         console.log('Telegram bot initialized and polling started.');
     }
 
-    sendAlert(pair, signal, entryPrice, stopLoss, takeProfit) {
+    sendAlert(alertData) {
         if (!this.config.telegramBotEnabled) return;
+
+        // Destructure the alert data with default values
+        const {
+            pair,
+            signal,
+            currentPrice,
+            entryPrice,
+            stopLoss,
+            takeProfit,
+            optimalBuy = null
+        } = alertData;
+
         if (!this.config.alertSignals.includes(signal)) return;
         const now = Date.now();
         const lastAlert = this.lastAlertTimes[pair] || 0;
         if (now - lastAlert < this.config.alertCooldown) return;
-        
+
         // Calculate risk-reward metrics
         const riskPct = Math.abs((entryPrice - stopLoss) / entryPrice * 100);
         const rewardPct = Math.abs((takeProfit - entryPrice) / entryPrice * 100);
         const rrRatio = (rewardPct / riskPct).toFixed(2);
-        
+
         const action = signal === 'long' ? '🟢 LONG' : '🔴 SHORT';
         const pricePrecision = pair.includes('BTC') ? 2 : 6;
-        
-        const message = `
+
+        let message = `
 ${action} SIGNAL
 ──────────────
 📊 Pair: ${pair}
-💰 Entry: $${entryPrice.toFixed(pricePrecision)}
+💰 Current: $${currentPrice.toFixed(pricePrecision)}
+🎯 Entry: $${entryPrice.toFixed(pricePrecision)}
+        `.trim();
+
+        // Add optimal buy price if available and different from entry
+        if (optimalBuy && optimalBuy !== entryPrice) {
+            const discount = ((currentPrice - optimalBuy) / currentPrice * 100).toFixed(2);
+            message += `\n⭐ Optimal: $${optimalBuy.toFixed(pricePrecision)} (${discount}% below current) \n`;
+        }
+
+        message += `
 🛑 Stop Loss: $${stopLoss.toFixed(pricePrecision)} (${riskPct.toFixed(2)}%)
 🎯 Take Profit: $${takeProfit.toFixed(pricePrecision)} (${rewardPct.toFixed(2)}%)
 ⚖️ Risk/Reward: ${rrRatio}:1
 ⏰ Time: ${new Date().toLocaleString()}
         `.trim();
-        
+
         try {
             this.bot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, message);
             this.lastAlertTimes[pair] = now;

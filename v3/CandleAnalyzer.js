@@ -18,9 +18,9 @@ class CandleAnalyzer {
     getConfigurationForTimeframe(timeframe) {
         const baseConfig = {
             emaPeriods: { 
-                fast: 8,       // Changed from 9
-                medium: 20,    // Changed from 21
-                slow: 50       // Kept same
+                fast: 8,
+                medium: 21,
+                slow: 50
             },
             rsiPeriod: 14,
             bbands: {
@@ -28,9 +28,10 @@ class CandleAnalyzer {
                 stdDev: 2
             },
             volumeEmaPeriod: 20,
-            volumeSpikeMultiplier: 1.8,
+            volumeSpikeMultiplier: 2.5,
             buyingPressureLookback: 4,
-            buyingPressureThreshold: 0.55 // Lowered from 0.6 for more sensitivity
+            buyingPressureThreshold: 0.7,
+            minCandlesForAnalysis: 50
         };
 
         switch(timeframe) {
@@ -38,25 +39,25 @@ class CandleAnalyzer {
                 return {
                     ...baseConfig,
                     emaPeriods: { fast: 5, medium: 13, slow: 34 },
-                    volumeSpikeMultiplier: 2.0,
+                    volumeSpikeMultiplier: 3.0,
                     buyingPressureLookback: 8,
-                    buyingPressureThreshold: 0.5
+                    buyingPressureThreshold: 0.75
                 };
             case '4h':
                 return {
                     ...baseConfig,
                     emaPeriods: { fast: 13, medium: 34, slow: 89 },
-                    volumeSpikeMultiplier: 1.6,
+                    volumeSpikeMultiplier: 2.0,
                     buyingPressureLookback: 3,
-                    buyingPressureThreshold: 0.6
+                    buyingPressureThreshold: 0.65
                 };
             case '1d':
                 return {
                     ...baseConfig,
                     emaPeriods: { fast: 21, medium: 50, slow: 200 },
-                    volumeSpikeMultiplier: 1.4,
+                    volumeSpikeMultiplier: 1.8,
                     buyingPressureLookback: 2,
-                    buyingPressureThreshold: 0.65
+                    buyingPressureThreshold: 0.7
                 };
             default: // 1h
                 return baseConfig;
@@ -104,37 +105,79 @@ class CandleAnalyzer {
         if (!candles || candles.length < lookback) return false;
         
         const recent = candles.slice(-lookback);
+        
+        // Count bullish candles (close > open)
         const bullishCount = recent.filter(c => 
             this._getCandleProp(c, 'close') > this._getCandleProp(c, 'open')
         ).length;
         
-        // More nuanced buying pressure detection
-        const volumeWeighted = recent.reduce((sum, c) => {
+        // Calculate bullish volume ratio
+        const totalVolume = recent.reduce((sum, c) => sum + this._getCandleProp(c, 'volume'), 0);
+        const bullishVolume = recent.reduce((sum, c) => {
             const isBullish = this._getCandleProp(c, 'close') > this._getCandleProp(c, 'open');
             return sum + (isBullish ? this._getCandleProp(c, 'volume') : 0);
-        }, 0) / recent.reduce((sum, c) => sum + this._getCandleProp(c, 'volume'), 0);
+        }, 0);
         
-        return bullishCount >= Math.ceil(lookback * this.config.buyingPressureThreshold) ||
-               volumeWeighted > 0.65;
+        const bullishVolumeRatio = totalVolume > 0 ? bullishVolume / totalVolume : 0;
+        
+        // More strict conditions for buying pressure
+        const minBullishCandles = Math.ceil(lookback * this.config.buyingPressureThreshold);
+        const hasEnoughBullishCandles = bullishCount >= minBullishCandles;
+        const hasStrongVolumeSupport = bullishVolumeRatio > 0.6;
+        
+        // Both conditions must be met
+        return hasEnoughBullishCandles && hasStrongVolumeSupport;
+    }
+
+    hasSellingPressure(candles, lookback = this.config.buyingPressureLookback) {
+        if (!candles || candles.length < lookback) return false;
+        
+        const recent = candles.slice(-lookback);
+        
+        // Count bearish candles (close < open)
+        const bearishCount = recent.filter(c => 
+            this._getCandleProp(c, 'close') < this._getCandleProp(c, 'open')
+        ).length;
+        
+        // Calculate bearish volume ratio
+        const totalVolume = recent.reduce((sum, c) => sum + this._getCandleProp(c, 'volume'), 0);
+        const bearishVolume = recent.reduce((sum, c) => {
+            const isBearish = this._getCandleProp(c, 'close') < this._getCandleProp(c, 'open');
+            return sum + (isBearish ? this._getCandleProp(c, 'volume') : 0);
+        }, 0);
+        
+        const bearishVolumeRatio = totalVolume > 0 ? bearishVolume / totalVolume : 0;
+        
+        // More strict conditions for selling pressure
+        const minBearishCandles = Math.ceil(lookback * this.config.buyingPressureThreshold);
+        const hasEnoughBearishCandles = bearishCount >= minBearishCandles;
+        const hasStrongVolumeSupport = bearishVolumeRatio > 0.6;
+        
+        // Both conditions must be met
+        return hasEnoughBearishCandles && hasStrongVolumeSupport;
     }
 
     _hasEMABullishCross(fastEMA, mediumEMA) {
-        return fastEMA.length >= 2 && mediumEMA.length >= 2 &&
+        return fastEMA.length >= 3 && mediumEMA.length >= 3 &&
                fastEMA[fastEMA.length - 1] > mediumEMA[mediumEMA.length - 1] &&
-               fastEMA[fastEMA.length - 2] <= mediumEMA[mediumEMA.length - 2];
+               fastEMA[fastEMA.length - 2] <= mediumEMA[mediumEMA.length - 2] &&
+               fastEMA[fastEMA.length - 3] <= mediumEMA[mediumEMA.length - 3];
     }
 
     _hasEMABearishCross(fastEMA, mediumEMA) {
-        return fastEMA.length >= 2 && mediumEMA.length >= 2 &&
+        return fastEMA.length >= 3 && mediumEMA.length >= 3 &&
                fastEMA[fastEMA.length - 1] < mediumEMA[mediumEMA.length - 1] &&
-               fastEMA[fastEMA.length - 2] >= mediumEMA[mediumEMA.length - 2];
+               fastEMA[fastEMA.length - 2] >= mediumEMA[mediumEMA.length - 2] &&
+               fastEMA[fastEMA.length - 3] >= mediumEMA[mediumEMA.length - 3];
     }
 
     _hasVolumeSpike(candles, volumeEMA) {
         if (!candles.length || !volumeEMA.length) return false;
         const currentVolume = this._getCandleProp(candles.slice(-1)[0], 'volume');
-        return currentVolume > volumeEMA.slice(-1)[0] * this.config.volumeSpikeMultiplier ||
-               currentVolume > 2 * this.calculateAverageVolume(candles.slice(-10));
+        const currentVolumeEMA = volumeEMA.slice(-1)[0];
+        
+        return currentVolume > currentVolumeEMA * this.config.volumeSpikeMultiplier &&
+               currentVolume > this.calculateAverageVolume(candles.slice(-20)) * 2.5;
     }
 
     calculateAverageVolume(candles) {
@@ -144,18 +187,34 @@ class CandleAnalyzer {
 
     _isTrendConfirmed(candles, slowEMA) {
         if (!candles.length || !slowEMA.length) return false;
-        const currentPrice = this._getCandleProp(candles.slice(-1)[0], 'close');
-        return currentPrice > slowEMA[slowEMA.length - 1];
+        
+        const recentCandles = candles.slice(-5);
+        const aboveCount = recentCandles.filter(c => 
+            this._getCandleProp(c, 'close') > slowEMA[slowEMA.length - 1]
+        ).length;
+        
+        return aboveCount >= 4;
+    }
+
+    _isDowntrendConfirmed(candles, slowEMA) {
+        if (!candles.length || !slowEMA.length) return false;
+        
+        const recentCandles = candles.slice(-5);
+        const belowCount = recentCandles.filter(c => 
+            this._getCandleProp(c, 'close') < slowEMA[slowEMA.length - 1]
+        ).length;
+        
+        return belowCount >= 4;
     }
 
     isOverbought(candles) {
         const rsi = this.calculateRSI(candles);
-        return rsi.length > 0 && rsi.slice(-1)[0] > 70;
+        return rsi.length > 0 && rsi.slice(-1)[0] > 72;
     }
 
     isOversold(candles) {
         const rsi = this.calculateRSI(candles);
-        return rsi.length > 0 && rsi.slice(-1)[0] < 30;
+        return rsi.length > 0 && rsi.slice(-1)[0] < 28;
     }
 
     isNearBollingerBand(candles, type = 'upper') {
@@ -168,13 +227,13 @@ class CandleAnalyzer {
             ? bbands[bbands.length - 1].upper 
             : bbands[bbands.length - 1].lower;
         
-        return Math.abs(lastClose - lastBand) / lastBand < 0.01;
+        return Math.abs(lastClose - lastBand) / lastBand < 0.008;
     }
 
     getAllSignals(candles) {
         try {
-            if (!candles || candles.length < this.config.emaPeriods.slow) {
-                throw new Error(`Insufficient candle data (need at least ${this.config.emaPeriods.slow} candles)`);
+            if (!candles || candles.length < this.config.minCandlesForAnalysis) {
+                throw new Error(`Insufficient candle data (need at least ${this.config.minCandlesForAnalysis} candles)`);
             }
 
             // Calculate all indicators once for performance
@@ -185,6 +244,16 @@ class CandleAnalyzer {
             const rsi = this.calculateRSI(candles);
             const bbands = this.calculateBBands(candles);
 
+            const emaBullishCross = this._hasEMABullishCross(fastEMA, mediumEMA);
+            const emaBearishCross = this._hasEMABearishCross(fastEMA, mediumEMA);
+            const buyingPressure = this.hasBuyingPressure(candles);
+            const sellingPressure = this.hasSellingPressure(candles);
+            const volumeSpike = this._hasVolumeSpike(candles, volumeEMA);
+            const trendConfirmed = this._isTrendConfirmed(candles, slowEMA);
+            const downtrendConfirmed = this._isDowntrendConfirmed(candles, slowEMA);
+            const isOverbought = this.isOverbought(candles);
+            const isOversold = this.isOversold(candles);
+
             return {
                 // Individual indicators
                 emaFast: fastEMA.slice(-1)[0],
@@ -193,23 +262,25 @@ class CandleAnalyzer {
                 rsi: rsi.slice(-1)[0],
                 bollingerBands: bbands.slice(-1)[0],
                 volumeEMA: volumeEMA.slice(-1)[0],
+                //
+                sellingPressure: sellingPressure,
 
                 // Bullish signals
-                emaBullishCross: this._hasEMABullishCross(fastEMA, mediumEMA),
-                buyingPressure: this.hasBuyingPressure(candles),
-                volumeSpike: this._hasVolumeSpike(candles, volumeEMA),
-                trendConfirmed: this._isTrendConfirmed(candles, slowEMA),
-                isBullish: this._hasEMABullishCross(fastEMA, mediumEMA) && 
-                          this._isTrendConfirmed(candles, slowEMA),
+                emaBullishCross: emaBullishCross,
+                buyingPressure: buyingPressure,
+                volumeSpike: volumeSpike,
+                trendConfirmed: trendConfirmed,
+                isBullish: emaBullishCross && trendConfirmed && !isOverbought,
 
                 // Bearish signals
-                emaBearishCross: this._hasEMABearishCross(fastEMA, mediumEMA),
-                isBearish: this._hasEMABearishCross(fastEMA, mediumEMA) && 
-                          !this._isTrendConfirmed(candles, slowEMA),
+                emaBearishCross: emaBearishCross,
+                sellingPressure: sellingPressure,
+                downtrendConfirmed: downtrendConfirmed,
+                isBearish: emaBearishCross && downtrendConfirmed && !isOversold,
 
                 // RSI conditions
-                isOverbought: this.isOverbought(candles),
-                isOversold: this.isOversold(candles),
+                isOverbought: isOverbought,
+                isOversold: isOversold,
 
                 // Bollinger Band conditions
                 nearUpperBand: this.isNearBollingerBand(candles, 'upper'),
