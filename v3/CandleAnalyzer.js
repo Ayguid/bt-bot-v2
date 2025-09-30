@@ -1,9 +1,9 @@
 const TechnicalIndicators = require('technicalindicators');
 
 class CandleAnalyzer {
-    constructor(timeframe = '1h') {
+    constructor(timeframe = '1h', riskManagementConfig = null) {
         this.timeframe = timeframe;
-        this.config = this.getConfigurationForTimeframe(timeframe);
+        this.config = this.buildConfig(riskManagementConfig);
         
         this.CANDLE_INDEX = {
             TIMESTAMP: 0, 
@@ -15,54 +15,33 @@ class CandleAnalyzer {
         };
     }
 
-    getConfigurationForTimeframe(timeframe) {
-        const baseConfig = {
+buildConfig(riskManagementConfig) {
+    // Use main bot config if provided - this should always be the case
+    if (riskManagementConfig) {
+        return {
             emaPeriods: { 
-                fast: 8,
-                medium: 21,
-                slow: 50
+                fast: riskManagementConfig.emaShortPeriod,
+                medium: riskManagementConfig.emaMediumPeriod,
+                slow: riskManagementConfig.emaLongPeriod
             },
-            rsiPeriod: 14,
+            rsiPeriod: riskManagementConfig.rsiPeriod,
             bbands: {
-                period: 20,
-                stdDev: 2
+                period: riskManagementConfig.bbandsPeriod,
+                stdDev: riskManagementConfig.bbandsStdDev
             },
-            volumeEmaPeriod: 20,
-            volumeSpikeMultiplier: 2.5,
-            buyingPressureLookback: 4,
-            buyingPressureThreshold: 0.7,
-            minCandlesForAnalysis: 50
+            volumeEmaPeriod: riskManagementConfig.volumeEmaPeriod,
+            volumeSpikeMultiplier: riskManagementConfig.volumeSpikeThreshold,
+            volumeAverageMultiplier: riskManagementConfig.volumeAverageMultiplier,
+            volumeLookbackPeriod: riskManagementConfig.volumeLookbackPeriod,
+            buyingPressureLookback: riskManagementConfig.buyingPressureLookback,
+            buyingPressureThreshold: riskManagementConfig.buyingPressureThreshold,
+            minCandlesForAnalysis: riskManagementConfig.minCandlesForAnalysis
         };
-
-        switch(timeframe) {
-            case '15m':
-                return {
-                    ...baseConfig,
-                    emaPeriods: { fast: 5, medium: 13, slow: 34 },
-                    volumeSpikeMultiplier: 3.0,
-                    buyingPressureLookback: 8,
-                    buyingPressureThreshold: 0.75
-                };
-            case '4h':
-                return {
-                    ...baseConfig,
-                    emaPeriods: { fast: 13, medium: 34, slow: 89 },
-                    volumeSpikeMultiplier: 2.0,
-                    buyingPressureLookback: 3,
-                    buyingPressureThreshold: 0.65
-                };
-            case '1d':
-                return {
-                    ...baseConfig,
-                    emaPeriods: { fast: 21, medium: 50, slow: 200 },
-                    volumeSpikeMultiplier: 1.8,
-                    buyingPressureLookback: 2,
-                    buyingPressureThreshold: 0.7
-                };
-            default: // 1h
-                return baseConfig;
-        }
     }
+
+    // If no config provided, throw error instead of using inconsistent defaults
+    throw new Error('CandleAnalyzer requires riskManagementConfig from main bot');
+}
 
     _getCandleProp(candle, prop) {
         return candle[this.CANDLE_INDEX[prop.toUpperCase()]];
@@ -175,9 +154,13 @@ class CandleAnalyzer {
         if (!candles.length || !volumeEMA.length) return false;
         const currentVolume = this._getCandleProp(candles.slice(-1)[0], 'volume');
         const currentVolumeEMA = volumeEMA.slice(-1)[0];
+        const averageVolume = this.calculateAverageVolume(
+            candles.slice(-this.config.volumeLookbackPeriod)
+        );
         
+        // Use both configurable thresholds for more robust spike detection
         return currentVolume > currentVolumeEMA * this.config.volumeSpikeMultiplier &&
-               currentVolume > this.calculateAverageVolume(candles.slice(-20)) * 2.5;
+               currentVolume > averageVolume * this.config.volumeAverageMultiplier;
     }
 
     calculateAverageVolume(candles) {
@@ -262,7 +245,6 @@ class CandleAnalyzer {
                 rsi: rsi.slice(-1)[0],
                 bollingerBands: bbands.slice(-1)[0],
                 volumeEMA: volumeEMA.slice(-1)[0],
-                //
                 sellingPressure: sellingPressure,
 
                 // Bullish signals

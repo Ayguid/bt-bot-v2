@@ -4,51 +4,159 @@ const OrderBookAnalyzer = require('./OrderBookAnalyzer');
 const TelegramBotHandler = require('./TelegramBotHandler');
 const { wait } = require('../utils/helpers');
 
-const config = {
-    tradingPairs: ['BTCUSDT', 'ETHUSDT', 'FETUSDT', 'XRPUSDT', 'BANANAS31USDT'],
-    timeframe: '1h',
-    maxCandles: 120,
-    analysisInterval: 1000,
-    reconnectInterval: 5000,
-    telegramBotEnabled: true,
-    alertCooldown: 3600000,
-    alertSignals: ['long', 'short'],
-    riskManagement: {
-        stopLossPercent: 0.02, // 2% stop loss
-        riskRewardRatio: 2,    // 2:1 risk-reward ratio
-        useBollingerBands: false, // Option to toggle between methods
-        optimalEntryLookback: 10, // Increased from 5 to 10 for better support calculation
-        supportResistanceWeight: 0.4, // Increased weight for support/resistance
-        volumeWeight: 0.3, // Increased weight for volume analysis
-        orderBookWeight: 0.2, // Weight for order book analysis
-        maxOptimalDiscount: 0.08, // Maximum 8% discount from current price
-        minOptimalDiscount: 0.01, // Minimum 1% discount from current price
-        longEntryDiscount: 0.002, // 0.2% discount for long entries
-        shortEntryPremium: 0.001, // Reduced from 0.002 to 0.1% for short entries
-        minCandlesRequired: 20, // Minimum candles for analysis
-        volumeSpikeThreshold: 1.5, // Volume spike threshold multiplier
-        priceTrendLookback: 8, // Lookback period for price trend analysis
-        significantBidsCount: 3, // Number of significant bids to consider
-        minOptimalDiscountPercent: 0.005, // Minimum 0.5% discount for optimal price
-        optimalBuyThreshold: 0.01, // 1% threshold for using optimal buy
-        bollingerBandAdjustment: 0.002, // 0.2% adjustment for Bollinger Band entries
-        emaShortPeriod: 8,       // Faster EMA for short-term trends
-        emaMediumPeriod: 21,     // Medium EMA
-        emaLongPeriod: 50        // Longer EMA for trend confirmation
-    }
-};
-
 class BinancePredictiveBot {
-    constructor(config) {
-        this.config = config;
+    constructor() {
+        this.timeframe = process.env.TIMEFRAME || '1h';
+        this.config = this.buildConfig();
+        
         this.exchangeManager = new (require('./ExchangeManager'));
         this.analyzers = {
-            candle: new CandleAnalyzer(config.timeframe),
+            candle: new CandleAnalyzer(this.timeframe, this.config.riskManagement),
             orderBook: new OrderBookAnalyzer()
         };
         this.marketData = this.initializeMarketData();
         this.isRunning = false;
-        this.telegramBotHandler = new TelegramBotHandler(config);
+        this.telegramBotHandler = new TelegramBotHandler(this.config);
+    }
+
+    buildConfig() {
+        // Timeframe configuration with adaptive lookback periods
+        const timeframeConfigs = {
+            '1m': {
+                analysisInterval: 10000, // 10 seconds
+                maxCandles: 240, // 4 hours
+                lookbackMultiplier: 1,
+            emaMultiplier: 0.8  // Changed from 0.2 to 0.8
+            },
+            '5m': {
+                analysisInterval: 30000, // 30 seconds
+                maxCandles: 288, // 24 hours
+                lookbackMultiplier: 5,
+            emaMultiplier: 0.9  // Changed from 0.5 to 0.9
+            },
+            '15m': {
+                analysisInterval: 60000, // 1 minute
+                maxCandles: 192, // 2 days
+                lookbackMultiplier: 15,
+            emaMultiplier: 1.0  // Changed from 0.6 to 1.0
+            },
+            '1h': {
+                analysisInterval: 300000, // 5 minutes
+                maxCandles: 168, // 1 week
+                lookbackMultiplier: 60,
+            emaMultiplier: 1.0
+            },
+            '4h': {
+                analysisInterval: 900000, // 15 minutes
+                maxCandles: 126, // 3 weeks
+                lookbackMultiplier: 240,
+            emaMultiplier: 1.2  // Reduced from 1.5 to 1.2
+            },
+            '1d': {
+                analysisInterval: 3600000, // 1 hour
+                maxCandles: 90, // 3 months
+                lookbackMultiplier: 1440,
+            emaMultiplier: 1.5  // Reduced from 2.5 to 1.5
+            }
+        };
+
+        const timeframeConfig = timeframeConfigs[this.timeframe] || timeframeConfigs['1h'];
+        
+        const baseRiskManagement = {
+            stopLossPercent: 0.02, // 2% stop loss
+            riskRewardRatio: 2,    // 2:1 risk-reward ratio
+            useBollingerBands: false,
+            supportResistanceWeight: 0.4,
+            volumeWeight: 0.3,
+            orderBookWeight: 0.2,
+            maxOptimalDiscount: 0.08,
+            minOptimalDiscount: 0.01,
+            longEntryDiscount: 0.002,
+            shortEntryPremium: 0.001,
+            minCandlesRequired: 20,
+            volumeSpikeMultiplier: 1.5,
+            volumeAverageMultiplier: 1.8,
+            volumeLookbackPeriod: 20,
+            significantBidsCount: 3,
+            minOptimalDiscountPercent: 0.005,
+            optimalBuyThreshold: 0.01,
+            bollingerBandAdjustment: 0.002,
+            // Base EMA periods (will be adjusted by timeframe)
+            baseEmaShortPeriod: 8,
+            baseEmaMediumPeriod: 21,
+            baseEmaLongPeriod: 50,
+            // Base lookback periods (will be adjusted by timeframe)
+            baseOptimalEntryLookback: 10,
+            basePriceTrendLookback: 8,
+            baseVolumeLookback: 20,
+            // Candle analyzer specific settings
+            buyingPressureLookback: 4,
+            buyingPressureThreshold: 0.7,
+            rsiPeriod: 14,
+            bbandsPeriod: 20,
+            bbandsStdDev: 2,
+            volumeEmaPeriod: 20,
+            minCandlesForAnalysis: 50
+        };
+
+        const adaptiveRiskManagement = this.calculateAdaptiveRiskManagement(baseRiskManagement, timeframeConfig);
+
+        return {
+            tradingPairs: ['BTCUSDT', 'ETHUSDT', 'FETUSDT', 'XRPUSDT', 'ADAUSDT', 'DOGEUSDT'],
+            timeframe: this.timeframe,
+            analysisInterval: timeframeConfig.analysisInterval,
+            maxCandles: timeframeConfig.maxCandles,
+            telegramBotEnabled: true,
+            alertCooldown: 3600000,
+            alertSignals: ['long', 'short'],
+            riskManagement: adaptiveRiskManagement,
+            reconnectInterval: 5000,
+        };
+    }
+
+    calculateAdaptiveRiskManagement(baseRiskManagement, timeframeConfig) {
+        const multiplier = timeframeConfig.lookbackMultiplier;
+        const emaMultiplier = timeframeConfig.emaMultiplier;
+        
+        return {
+            ...baseRiskManagement,
+            // Scale lookback periods based on timeframe
+            optimalEntryLookback: Math.max(5, Math.round(baseRiskManagement.baseOptimalEntryLookback * (60 / multiplier))),
+            priceTrendLookback: Math.max(3, Math.round(baseRiskManagement.basePriceTrendLookback * (60 / multiplier))),
+            volumeLookback: Math.max(10, Math.round(baseRiskManagement.baseVolumeLookback * (60 / multiplier))),
+            // Adjust EMA periods for different timeframes
+            emaShortPeriod: Math.max(5, Math.round(baseRiskManagement.baseEmaShortPeriod * emaMultiplier)),
+            emaMediumPeriod: Math.max(10, Math.round(baseRiskManagement.baseEmaMediumPeriod * emaMultiplier)),
+            emaLongPeriod: Math.max(20, Math.round(baseRiskManagement.baseEmaLongPeriod * emaMultiplier)),
+            // Adjust analysis intervals and thresholds
+            minCandlesRequired: Math.max(20, Math.round(20 * (60 / multiplier))),
+            volumeSpikeThreshold: this.getAdaptiveVolumeThreshold(multiplier),
+            volumeAverageMultiplier: this.getAdaptiveVolumeAverageThreshold(multiplier)
+        };
+    }
+
+    getAdaptiveVolumeThreshold(multiplier) {
+        // Higher timeframes need higher volume thresholds
+        const baseThreshold = 1.5;
+        
+        if (multiplier <= 1) return baseThreshold; // 1m
+        if (multiplier <= 5) return 1.8; // 5m
+        if (multiplier <= 15) return 2.0; // 15m
+        if (multiplier <= 60) return 2.2; // 1h
+        if (multiplier <= 240) return 2.5; // 4h
+        return 3.0; // 1d and above
+    }
+
+    getAdaptiveVolumeAverageThreshold(multiplier) {
+        // Slightly lower thresholds for average comparison
+        const baseThreshold = 1.8;
+        
+        if (multiplier <= 1) return baseThreshold; // 1m
+        if (multiplier <= 5) return 2.0; // 5m
+        if (multiplier <= 15) return 2.2; // 15m
+        if (multiplier <= 60) return 2.0; // 1h
+        if (multiplier <= 240) return 2.2; // 4h
+        return 2.8; // 1d and above
     }
 
     initializeMarketData() {
@@ -69,6 +177,15 @@ class BinancePredictiveBot {
         await this.fetchInitialCandles();
         await this.setupWebsocketSubscriptions();
         await this.telegramBotHandler.initialize();
+        
+        // Log timeframe configuration
+        console.log(`Initialized with ${this.timeframe} timeframe:`);
+        console.log(`- Analysis interval: ${this.config.analysisInterval}ms`);
+        console.log(`- Max candles: ${this.config.maxCandles}`);
+        console.log(`- Optimal entry lookback: ${this.config.riskManagement.optimalEntryLookback} periods`);
+        console.log(`- Price trend lookback: ${this.config.riskManagement.priceTrendLookback} periods`);
+        console.log(`- EMA periods: ${this.config.riskManagement.emaShortPeriod}/${this.config.riskManagement.emaMediumPeriod}/${this.config.riskManagement.emaLongPeriod}`);
+        console.log(`- Volume spike threshold: ${this.config.riskManagement.volumeSpikeThreshold}`);
     }
 
     async setupWebsocketSubscriptions() {
@@ -251,23 +368,27 @@ class BinancePredictiveBot {
         if (candleSignals.isOversold && isUptrend) return 'long';
 
         // Bollinger Band signals
-        const priceTrend = this.getPriceTrend(candles, this.config.riskManagement.priceTrendLookback);
+        const priceTrend = this.getPriceTrend(candles);
         if (candleSignals.nearUpperBand && priceTrend === 'strong_up') {
-            return 'short'; // Changed from 'potential_reversal' to 'short'
+            return 'short';
         }
         if (candleSignals.nearLowerBand && priceTrend === 'down') {
-            return 'long'; // Changed from 'potential_bounce' to 'long'
+            return 'long';
         }
 
         return 'neutral';
     }
 
-    getPriceTrend(candles, lookback) {
-        const recent = candles.slice(-lookback);
+    getPriceTrend(candles) {
+        const adaptiveLookback = this.config.riskManagement.priceTrendLookback;
+        if (candles.length < adaptiveLookback) return 'neutral';
+        
+        const recent = candles.slice(-adaptiveLookback);
         const upCount = recent.filter((c, i, arr) => i === 0 || c[4] > arr[i - 1][4]).length;
-        if (upCount === lookback) return 'strong_up';
-        if (upCount >= lookback * 0.7) return 'up';
-        if (upCount <= lookback * 0.3) return 'down';
+        
+        if (upCount === adaptiveLookback) return 'strong_up';
+        if (upCount >= adaptiveLookback * 0.7) return 'up';
+        if (upCount <= adaptiveLookback * 0.3) return 'down';
         return 'neutral';
     }
 
@@ -326,9 +447,9 @@ class BinancePredictiveBot {
             const minDiscount = currentPrice * (1 - this.config.riskManagement.maxOptimalDiscount);
 
             optimalPrice = Math.max(
-                Math.min(optimalPrice, maxDiscount), // Don't go too close to current
-                minDiscount, // Don't go too far below
-                medianSupport // Don't go below strong support
+                Math.min(optimalPrice, maxDiscount),
+                minDiscount,
+                medianSupport
             );
 
             // Final sanity check - ensure optimal is below current
@@ -363,13 +484,13 @@ class BinancePredictiveBot {
     }
 
     getPrecisionDigits(price) {
-        if (price >= 1000) return 2;      // 2 decimal places for prices >= 1000
-        if (price >= 100) return 3;       // 3 decimal places for prices >= 100
-        if (price >= 10) return 4;        // 4 decimal places for prices >= 10
-        if (price >= 1) return 5;         // 5 decimal places for prices >= 1
-        if (price >= 0.1) return 6;       // 6 decimal places for prices >= 0.1
-        if (price >= 0.01) return 7;      // 7 decimal places for prices >= 0.01
-        return 8;                         // 8 decimal places for very small prices
+        if (price >= 1000) return 2;
+        if (price >= 100) return 3;
+        if (price >= 10) return 4;
+        if (price >= 1) return 5;
+        if (price >= 0.1) return 6;
+        if (price >= 0.01) return 7;
+        return 8;
     }
 
     calculateSuggestedPrices(orderBook, candles, signal, candleAnalysis) {
@@ -405,8 +526,8 @@ class BinancePredictiveBot {
             }
     
             return {
-                entry: entryPrice,           // Market entry price
-                optimalBuy: optimalBuy,      // Better limit order price (should be lower)
+                entry: entryPrice,
+                optimalBuy: optimalBuy,
                 stopLoss: stopLossPrice,
                 takeProfit: takeProfitPrice
             };
@@ -428,7 +549,7 @@ class BinancePredictiveBot {
     
             return {
                 entry: entryPrice,
-                optimalBuy: null,            // Optimal buy doesn't apply to short signals
+                optimalBuy: null,
                 stopLoss: stopLossPrice,
                 takeProfit: takeProfitPrice
             };
@@ -551,7 +672,7 @@ class BinancePredictiveBot {
 }
 
 async function main() {
-    const bot = new BinancePredictiveBot(config);
+    const bot = new BinancePredictiveBot();
     process.on('SIGINT', async () => {
         await bot.shutdown();
         process.exit(0);

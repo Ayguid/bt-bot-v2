@@ -131,33 +131,37 @@ class OrderBookAnalyzer {
         };
     }
 
-    calculateVolumeChanges(current, previous, depth) {
-        const compareLevels = (currentLevels, previousLevels) => {
-            const previousMap = new Map(
-                previousLevels.slice(0, depth).map(([price, vol]) => [price.toFixed(8), vol])
+calculateVolumeChanges(current, previous, depth) {
+    const priceMatches = (p1, p2) => Math.abs(p1 - p2) / Math.min(p1, p2) < 0.0001; // 0.01% tolerance
+    
+    const compareLevels = (currentLevels, previousLevels) => {
+        return currentLevels.slice(0, depth).map(([currPrice, currVol]) => {
+            const prevLevel = previousLevels.find(([prevPrice]) => 
+                priceMatches(currPrice, prevPrice)
             );
-            return currentLevels.slice(0, depth).map(([price, vol]) => ({
-                price,
-                currentVolume: vol,
-                previousVolume: previousMap.get(price.toFixed(8)) || 0,
-                volumeChange: vol - (previousMap.get(price.toFixed(8)) || 0)
-            }));
-        };
-    
-        const bidChanges = compareLevels(current.bids, previous.bids);
-        const askChanges = compareLevels(current.asks, previous.asks);
-    
-        const bidVolChange = bidChanges.reduce((sum, {volumeChange}) => sum + volumeChange, 0);
-        const askVolChange = askChanges.reduce((sum, {volumeChange}) => sum + volumeChange, 0);
-    
-        return {
-            bidVolumeChange: bidVolChange,
-            askVolumeChange: askVolChange,
-            netVolumeChange: bidVolChange - askVolChange,
-            bidLevelsChanged: bidChanges.filter(l => l.volumeChange !== 0).length,
-            askLevelsChanged: askChanges.filter(l => l.volumeChange !== 0).length
-        };
-    }
+            return {
+                price: currPrice,
+                currentVolume: currVol,
+                previousVolume: prevLevel ? prevLevel[1] : 0,
+                volumeChange: currVol - (prevLevel ? prevLevel[1] : 0)
+            };
+        });
+    };
+
+    const bidChanges = compareLevels(current.bids, previous.bids);
+    const askChanges = compareLevels(current.asks, previous.asks);
+
+    const bidVolChange = bidChanges.reduce((sum, {volumeChange}) => sum + volumeChange, 0);
+    const askVolChange = askChanges.reduce((sum, {volumeChange}) => sum + volumeChange, 0);
+
+    return {
+        bidVolumeChange: bidVolChange,
+        askVolumeChange: askVolChange,
+        netVolumeChange: bidVolChange - askVolChange,
+        bidLevelsChanged: bidChanges.filter(l => l.volumeChange !== 0).length,
+        askLevelsChanged: askChanges.filter(l => l.volumeChange !== 0).length
+    };
+}
 
     generateSignals(metrics, topBids, topAsks, candles) {
         const signals = {
