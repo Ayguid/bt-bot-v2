@@ -20,45 +20,45 @@ class BinancePredictiveBot {
     }
 
     buildConfig() {
-        // Timeframe configuration with adaptive lookback periods
-        const timeframeConfigs = {
-            '1m': {
-                analysisInterval: 10000, // 10 seconds
-                maxCandles: 240, // 4 hours
-                lookbackMultiplier: 1,
-            emaMultiplier: 0.8  // Changed from 0.2 to 0.8
-            },
-            '5m': {
-                analysisInterval: 30000, // 30 seconds
-                maxCandles: 288, // 24 hours
-                lookbackMultiplier: 5,
-            emaMultiplier: 0.9  // Changed from 0.5 to 0.9
-            },
-            '15m': {
-                analysisInterval: 60000, // 1 minute
-                maxCandles: 192, // 2 days
-                lookbackMultiplier: 15,
-            emaMultiplier: 1.0  // Changed from 0.6 to 1.0
-            },
-            '1h': {
-                analysisInterval: 300000, // 5 minutes
-                maxCandles: 168, // 1 week
-                lookbackMultiplier: 60,
+    // Timeframe configuration with adaptive lookback periods
+    const timeframeConfigs = {
+        '1m': {
+            analysisInterval: 10000, // 10 seconds
+            maxCandles: 240,
+            lookbackMultiplier: 1,
+            emaMultiplier: 0.8
+        },
+        '5m': {
+            analysisInterval: 15000, // 15 seconds
+            maxCandles: 288,
+            lookbackMultiplier: 5,
+            emaMultiplier: 0.9
+        },
+        '15m': {
+            analysisInterval: 20000, // 20 seconds
+            maxCandles: 192,
+            lookbackMultiplier: 15,
             emaMultiplier: 1.0
-            },
-            '4h': {
-                analysisInterval: 900000, // 15 minutes
-                maxCandles: 126, // 3 weeks
-                lookbackMultiplier: 240,
-            emaMultiplier: 1.2  // Reduced from 1.5 to 1.2
-            },
-            '1d': {
-                analysisInterval: 3600000, // 1 hour
-                maxCandles: 90, // 3 months
-                lookbackMultiplier: 1440,
-            emaMultiplier: 1.5  // Reduced from 2.5 to 1.5
-            }
-        };
+        },
+        '1h': {
+            analysisInterval: 1000, // 1 SECOND - changed from 300000 (5 minutes)
+            maxCandles: 168,
+            lookbackMultiplier: 60,
+            emaMultiplier: 1.0
+        },
+        '4h': {
+            analysisInterval: 5000, // 5 seconds - changed from 900000 (15 minutes)
+            maxCandles: 126,
+            lookbackMultiplier: 240,
+            emaMultiplier: 1.2
+        },
+        '1d': {
+            analysisInterval: 10000, // 10 seconds - changed from 3600000 (1 hour)
+            maxCandles: 90,
+            lookbackMultiplier: 1440,
+            emaMultiplier: 1.5
+        }
+    };
 
         const timeframeConfig = timeframeConfigs[this.timeframe] || timeframeConfigs['1h'];
         
