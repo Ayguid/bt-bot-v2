@@ -16,49 +16,65 @@ class BinancePredictiveBot {
         };
         this.marketData = this.initializeMarketData();
         this.isRunning = false;
-        this.telegramBotHandler = new TelegramBotHandler(this.config);
+        this.telegramBotHandler = new TelegramBotHandler(this.config, this.executeCommand.bind(this));
+        
+        // ADDED: Signal cooldown and pair-specific configs
+        this.signalCooldowns = new Map();
+        this.lastSignalTimes = new Map();
+        this.pairConfigs = this.buildPairSpecificConfigs();
+    }
+
+    buildPairSpecificConfigs() {
+        return {
+            'BTCUSDT': { cooldown: 30, minVolume: 1000000, volatilityMultiplier: 1.0 }, // 30 minutes
+            'ETHUSDT': { cooldown: 30, minVolume: 500000, volatilityMultiplier: 1.2 },
+            'XRPUSDT': { cooldown: 30, minVolume: 1000000, volatilityMultiplier: 1.5 },
+            'ADAUSDT': { cooldown: 30, minVolume: 500000, volatilityMultiplier: 1.5 },
+            'DOGEUSDT': { cooldown: 30, minVolume: 2000000, volatilityMultiplier: 1.8 },
+            'FETUSDT': { cooldown: 30, minVolume: 500000, volatilityMultiplier: 2.0 }
+        };
     }
 
     buildConfig() {
-    // Timeframe configuration with adaptive lookback periods
-    const timeframeConfigs = {
-        '1m': {
-            analysisInterval: 10000, // 10 seconds
-            maxCandles: 240,
-            lookbackMultiplier: 1,
-            emaMultiplier: 0.8
-        },
-        '5m': {
-            analysisInterval: 15000, // 15 seconds
-            maxCandles: 288,
-            lookbackMultiplier: 5,
-            emaMultiplier: 0.9
-        },
-        '15m': {
-            analysisInterval: 20000, // 20 seconds
-            maxCandles: 192,
-            lookbackMultiplier: 15,
-            emaMultiplier: 1.0
-        },
-        '1h': {
-            analysisInterval: 1000, // 1 SECOND - changed from 300000 (5 minutes)
-            maxCandles: 168,
-            lookbackMultiplier: 60,
-            emaMultiplier: 1.0
-        },
-        '4h': {
-            analysisInterval: 5000, // 5 seconds - changed from 900000 (15 minutes)
-            maxCandles: 126,
-            lookbackMultiplier: 240,
-            emaMultiplier: 1.2
-        },
-        '1d': {
-            analysisInterval: 10000, // 10 seconds - changed from 3600000 (1 hour)
-            maxCandles: 90,
-            lookbackMultiplier: 1440,
-            emaMultiplier: 1.5
-        }
-    };
+        // Timeframe configuration with adaptive lookback periods
+        const timeframeConfigs = {
+            '1m': {
+                analysisInterval: 10000, // 10 seconds
+                maxCandles: 240,
+                lookbackMultiplier: 1,
+                emaMultiplier: 0.8
+            },
+            '5m': {
+                analysisInterval: 15000, // 15 seconds
+                maxCandles: 288,
+                lookbackMultiplier: 5,
+                emaMultiplier: 0.9
+            },
+            '15m': {
+                analysisInterval: 20000, // 20 seconds
+                maxCandles: 192,
+                lookbackMultiplier: 15,
+                emaMultiplier: 1.0
+            },
+            '1h': {
+                analysisInterval: 60000, // 1 minute
+                maxCandles: 168,
+                lookbackMultiplier: 60,
+                emaMultiplier: 1.0
+            },
+            '4h': {
+                analysisInterval: 5000, // 5 seconds
+                maxCandles: 126,
+                lookbackMultiplier: 240,
+                emaMultiplier: 1.2
+            },
+            '1d': {
+                analysisInterval: 10000, // 10 seconds
+                maxCandles: 90,
+                lookbackMultiplier: 1440,
+                emaMultiplier: 1.5
+            }
+        };
 
         const timeframeConfig = timeframeConfigs[this.timeframe] || timeframeConfigs['1h'];
         
@@ -112,6 +128,15 @@ class BinancePredictiveBot {
             riskManagement: adaptiveRiskManagement,
             reconnectInterval: 5000,
         };
+    }
+
+    async executeCommand(command, args) {
+        // Define supported commands
+        const commands = {
+            restart: () => 'Restarting bot...'// Placeholder for actual restart logic,
+        };
+        const action = commands[command];
+        return action ? await action() : 'Unknown command.';
     }
 
     calculateAdaptiveRiskManagement(baseRiskManagement, timeframeConfig) {
@@ -249,8 +274,14 @@ class BinancePredictiveBot {
                 this.analyzers.candle.getAllSignals(candles)
             ]);
 
-            const compositeSignal = this.determineCompositeSignal(candleAnalysis, obAnalysis.signals, candles);
-            const suggestedPrices = this.calculateSuggestedPrices(orderBook, candles, compositeSignal, candleAnalysis, obAnalysis);
+            // Calculate signal score first
+            const signalScore = this.calculateSignalScore(candleAnalysis, obAnalysis.signals, candles, symbol);
+            
+            // Log signal details for debugging
+            this.logSignalDetails(symbol, signalScore, candleAnalysis, obAnalysis.signals);
+
+            const compositeSignal = this.determineCompositeSignal(candleAnalysis, obAnalysis.signals, candles, symbol, signalScore);
+            const suggestedPrices = this.calculateSuggestedPrices(orderBook, candles, compositeSignal, candleAnalysis, symbol);
 
             if (compositeSignal === 'long' || compositeSignal === 'short') {
                 this.telegramBotHandler.sendAlert({
@@ -260,7 +291,8 @@ class BinancePredictiveBot {
                     entryPrice: suggestedPrices.entry,
                     stopLoss: suggestedPrices.stopLoss,
                     takeProfit: suggestedPrices.takeProfit,
-                    optimalBuy: suggestedPrices.optimalBuy
+                    optimalBuy: suggestedPrices.optimalBuy,
+                    signalScore: signalScore[compositeSignal] // Add score to alert
                 });
             }
 
@@ -271,7 +303,8 @@ class BinancePredictiveBot {
                 signals: {
                     candle: candleAnalysis,
                     orderBook: obAnalysis.signals,
-                    compositeSignal
+                    compositeSignal,
+                    signalScore // Include score in results
                 },
                 suggestedPrices,
                 indicators: {
@@ -291,92 +324,156 @@ class BinancePredictiveBot {
         }
     }
 
-    determineCompositeSignal(candleSignals, obSignals, candles) {
-        // Check for valid signals first
+    // UPDATED: Signal determination with scoring system
+    determineCompositeSignal(candleSignals, obSignals, candles, symbol, signalScore) {
         if (candleSignals.error) return 'neutral';
         
+        // Check cooldown first
+        if (this.isInCooldown(symbol)) {
+            return 'neutral';
+        }
+
+        // Use scoring system instead of binary conditions
+        const score = signalScore || this.calculateSignalScore(candleSignals, obSignals, candles, symbol);
+        
+        // Only trigger on high-confidence signals (8/10 score)
+        if (score.long >= 8) {
+            console.log(`🎯 STRONG LONG (Score: ${score.long}/10) for ${symbol}`);
+            this.updateCooldown(symbol);
+            return 'long';
+        }
+        
+        if (score.short >= 8) {
+            console.log(`🎯 STRONG SHORT (Score: ${score.short}/10) for ${symbol}`);
+            this.updateCooldown(symbol);
+            return 'short';
+        }
+
+        return 'neutral';
+    }
+
+    // ADDED: Scoring system for signal quality
+    calculateSignalScore(candleSignals, obSignals, candles, symbol) {
+        let longScore = 0;
+        let shortScore = 0;
+
         const isUptrend = candleSignals.emaFast > candleSignals.emaMedium &&
-            candleSignals.emaMedium > candleSignals.emaSlow;
+                         candleSignals.emaMedium > candleSignals.emaSlow;
         
         const isDowntrend = candleSignals.emaFast < candleSignals.emaMedium &&
-            candleSignals.emaMedium < candleSignals.emaSlow;
+                           candleSignals.emaMedium < candleSignals.emaSlow;
 
         const lastCandle = candles[candles.length - 1];
         const lastVolume = this.analyzers.candle._getCandleProp(lastCandle, 'volume');
         const isHighVolume = candleSignals.volumeSpike ||
-            lastVolume > candleSignals.volumeEMA * 1.8;
+                            lastVolume > candleSignals.volumeEMA * this.config.riskManagement.volumeAverageMultiplier;
 
-        // STRONG LONG SIGNALS
-        if (candleSignals.emaBullishCross && 
-            candleSignals.buyingPressure && 
-            !candleSignals.isOverbought) {
-            const obConfirms = obSignals.compositeSignal.includes('buy') || 
-                              obSignals.pricePressure.includes('up');
-            if (obConfirms || isHighVolume) {
-                return 'long';
-            }
-        }
+        // === LONG SIGNAL SCORING ===
+        
+        // Core trend signals (HIGH WEIGHT)
+        if (candleSignals.emaBullishCross) longScore += 3;
+        if (candleSignals.buyingPressure) longScore += 2;
+        if (isUptrend) longScore += 2;
+        
+        // Confirmation signals (MEDIUM WEIGHT)
+        if (!candleSignals.isOverbought) longScore += 1;
+        if (isHighVolume) longScore += 1;
+        if (candleSignals.rsi > 40 && candleSignals.rsi < 60) longScore += 1;
+        
+        // Additional bullish conditions (LOW WEIGHT)
+        if (obSignals.strongBidImbalance) longScore += 1;
+        if (obSignals.supportDetected) longScore += 1;
+        if (candleSignals.nearLowerBand) longScore += 1;
+        if (obSignals.pricePressure === 'up' || obSignals.pricePressure === 'strong_up') longScore += 1;
 
-        // STRONG SHORT SIGNALS
-        if (candleSignals.emaBearishCross &&
-            candleSignals.isOverbought &&
-            (obSignals.compositeSignal.includes('sell') || 
-             obSignals.pricePressure.includes('down') ||
-             isHighVolume)) {
-            return 'short';
-        }
+        // === SHORT SIGNAL SCORING ===
+        
+        // Core trend signals (HIGH WEIGHT)
+        if (candleSignals.emaBearishCross) shortScore += 3;
+        if (candleSignals.sellingPressure) shortScore += 2;
+        if (isDowntrend) shortScore += 2;
+        
+        // Confirmation signals (MEDIUM WEIGHT)
+        if (candleSignals.isOverbought) shortScore += 1;
+        if (isHighVolume) shortScore += 1;
+        if (candleSignals.rsi > 60 && candleSignals.rsi < 80) shortScore += 1;
+        
+        // Additional bearish conditions (LOW WEIGHT)
+        if (obSignals.strongAskImbalance) shortScore += 1;
+        if (obSignals.resistanceDetected) shortScore += 1;
+        if (candleSignals.nearUpperBand) shortScore += 1;
+        if (obSignals.pricePressure === 'down' || obSignals.pricePressure === 'strong_down') shortScore += 1;
 
-        // MODERATE LONG SIGNALS
-        if ((candleSignals.buyingPressure || candleSignals.emaBullishCross) &&
-            !candleSignals.isOverbought &&
-            (obSignals.pricePressure.includes('up') || isHighVolume)) {
-            return 'long';
-        }
-
-        // MODERATE SHORT SIGNALS
-        if ((candleSignals.isOverbought || candleSignals.emaBearishCross) &&
-            isDowntrend &&
-            (obSignals.pricePressure.includes('down') || isHighVolume)) {
-            return 'short';
-        }
-
-        // TREND FOLLOWING LONG
-        if (isUptrend && 
-            candleSignals.buyingPressure && 
-            !candleSignals.isOverbought) {
-            return 'long';
-        }
-
-        // TREND FOLLOWING SHORT
-        if (isDowntrend && 
-            candleSignals.isOverbought) {
-            return 'short';
-        }
-
-        // VOLUME-BASED REVERSAL SIGNALS
+        // === VOLUME BOOST (applies to both) ===
         if (isHighVolume) {
-            if (candleSignals.isOverbought && !isUptrend) {
-                return 'short';
+            longScore += 1;
+            shortScore += 1;
+        }
+
+        // === TREND ALIGNMENT BONUS ===
+        if (isUptrend) longScore += 1;
+        if (isDowntrend) shortScore += 1;
+
+        return { long: Math.min(longScore, 10), short: Math.min(shortScore, 10) };
+    }
+
+    // ADDED: Signal details logging
+    logSignalDetails(symbol, signalScore, candleSignals, obSignals) {
+        if (signalScore.long >= 6 || signalScore.short >= 6) {
+            console.log(`\n📊 ${symbol} Signal Analysis:`);
+            console.log(`   Long Score: ${signalScore.long}/10, Short Score: ${signalScore.short}/10`);
+            
+            if (signalScore.long >= 6) {
+                console.log(`   🟢 LONG Conditions:`);
+                if (candleSignals.emaBullishCross) console.log(`     - EMA Bullish Cross`);
+                if (candleSignals.buyingPressure) console.log(`     - Buying Pressure`);
+                if (obSignals.strongBidImbalance) console.log(`     - Bid Imbalance`);
+                if (candleSignals.volumeSpike) console.log(`     - Volume Spike`);
             }
-            if (candleSignals.isOversold && !isDowntrend) {
-                return 'long';
+            
+            if (signalScore.short >= 6) {
+                console.log(`   🔴 SHORT Conditions:`);
+                if (candleSignals.emaBearishCross) console.log(`     - EMA Bearish Cross`);
+                if (candleSignals.sellingPressure) console.log(`     - Selling Pressure`);
+                if (obSignals.strongAskImbalance) console.log(`     - Ask Imbalance`);
+                if (candleSignals.volumeSpike) console.log(`     - Volume Spike`);
             }
         }
+    }
 
-        // RSI-based signals
-        if (candleSignals.isOverbought && isDowntrend) return 'short';
-        if (candleSignals.isOversold && isUptrend) return 'long';
+    // ADDED: Signal validation helper methods
+    isValidSignalConditions(candleSignals, candles, symbol) {
+        const pairConfig = this.pairConfigs[symbol];
+        const lastCandle = candles[candles.length - 1];
+        const volume = this.analyzers.candle._getCandleProp(lastCandle, 'volume');
+        
+        // Minimum volume filter
+        //if (volume < pairConfig.minVolume) return false;
+        
+        // RSI filter - avoid extreme zones
+        if (candleSignals.rsi > 75 || candleSignals.rsi < 25) return false;
+        
+        // Time filter - avoid low activity periods
+        //const utcHour = new Date().getUTCHours();
+        //if (utcHour >= 0 && utcHour <= 4) return false; // Asian session
+        
+        // Trend strength filter
+        const trendStrength = Math.abs(candleSignals.emaFast - candleSignals.emaMedium) / candleSignals.emaMedium;
+        if (trendStrength < 0.002) return false; // Minimum 0.2% trend strength
+        
+        return true;
+    }
 
-        // Bollinger Band signals
-        const priceTrend = this.getPriceTrend(candles);
-        if (candleSignals.nearUpperBand && priceTrend === 'strong_up') {
-            return 'short';
-        }
-        if (candleSignals.nearLowerBand && priceTrend === 'down') {
-            return 'long';
-        }
+    isInCooldown(symbol) {
+        const cooldown = this.pairConfigs[symbol]?.cooldown || 120; // minutes
+        const lastSignal = this.lastSignalTimes.get(symbol);
+        if (!lastSignal) return false;
+        
+        return (Date.now() - lastSignal) < (cooldown * 60 * 1000);
+    }
 
-        return 'neutral';
+    updateCooldown(symbol) {
+        this.lastSignalTimes.set(symbol, Date.now());
     }
 
     getPriceTrend(candles) {
@@ -493,13 +590,23 @@ class BinancePredictiveBot {
         return 8;
     }
 
-    calculateSuggestedPrices(orderBook, candles, signal, candleAnalysis) {
+    // UPDATED: Dynamic stop loss calculation with ATR
+    calculateSuggestedPrices(orderBook, candles, signal, candleAnalysis, symbol) {
         const currentPrice = candles[candles.length - 1][4];
         const bestBid = orderBook.bids[0]?.[0] || currentPrice;
         const bestAsk = orderBook.asks[0]?.[0] || currentPrice;
         const bb = candleAnalysis.bollingerBands;
+        
+        const pairConfig = this.pairConfigs[symbol];
+        const atr = this.calculateATR(candles, 14);
+        const volatility = atr / currentPrice;
+        
+        // Dynamic stop loss based on volatility
+        const baseStopPercent = 0.02; // 2%
+        const volatilityAdjustedStop = baseStopPercent * pairConfig.volatilityMultiplier * (1 + volatility * 10);
+        const dynamicStopPercent = Math.min(Math.max(volatilityAdjustedStop, 0.015), 0.05); // 1.5% to 5%
+        
         const { 
-            stopLossPercent, 
             riskRewardRatio, 
             useBollingerBands, 
             longEntryDiscount, 
@@ -512,18 +619,15 @@ class BinancePredictiveBot {
             null;
     
         if (signal === 'long') {
-            // ENTRY PRICE: Market price with small discount
             const entryPrice = bestAsk * (1 - longEntryDiscount);
-            let stopLossPrice, takeProfitPrice;
-    
-            if (useBollingerBands && bb && bb.upper && bb.lower) {
-                stopLossPrice = bb.lower * (1 - bollingerBandAdjustment);
-                takeProfitPrice = bb.upper * (1 + bollingerBandAdjustment);
-            } else {
-                stopLossPrice = entryPrice * (1 - stopLossPercent);
-                const riskAmount = entryPrice - stopLossPrice;
-                takeProfitPrice = entryPrice + (riskAmount * riskRewardRatio);
-            }
+            
+            // Use ATR-based stop loss instead of fixed percentage
+            const atrStopPrice = currentPrice - (atr * 1.5);
+            const percentageStopPrice = entryPrice * (1 - dynamicStopPercent);
+            const stopLossPrice = Math.max(atrStopPrice, percentageStopPrice);
+            
+            const riskAmount = entryPrice - stopLossPrice;
+            const takeProfitPrice = entryPrice + (riskAmount * riskRewardRatio);
     
             return {
                 entry: entryPrice,
@@ -534,18 +638,14 @@ class BinancePredictiveBot {
         }
     
         if (signal === 'short') {
-            // ENTRY PRICE: Market price with small premium
             const entryPrice = bestBid * (1 + shortEntryPremium);
-            let stopLossPrice, takeProfitPrice;
-    
-            if (useBollingerBands && bb && bb.upper && bb.lower) {
-                stopLossPrice = bb.upper * (1 + bollingerBandAdjustment);
-                takeProfitPrice = bb.lower * (1 - bollingerBandAdjustment);
-            } else {
-                stopLossPrice = entryPrice * (1 + stopLossPercent);
-                const riskAmount = stopLossPrice - entryPrice;
-                takeProfitPrice = entryPrice - (riskAmount * riskRewardRatio);
-            }
+            
+            const atrStopPrice = currentPrice + (atr * 1.5);
+            const percentageStopPrice = entryPrice * (1 + dynamicStopPercent);
+            const stopLossPrice = Math.min(atrStopPrice, percentageStopPrice);
+            
+            const riskAmount = stopLossPrice - entryPrice;
+            const takeProfitPrice = entryPrice - (riskAmount * riskRewardRatio);
     
             return {
                 entry: entryPrice,
@@ -561,6 +661,28 @@ class BinancePredictiveBot {
             stopLoss: null,
             takeProfit: null
         };
+    }
+
+    // ADDED: ATR calculation method
+    calculateATR(candles, period = 14) {
+        if (candles.length < period + 1) return 0;
+        
+        let trueRanges = [];
+        for (let i = 1; i < candles.length; i++) {
+            const high = candles[i][2];
+            const low = candles[i][3];
+            const prevClose = candles[i-1][4];
+            
+            const tr1 = high - low;
+            const tr2 = Math.abs(high - prevClose);
+            const tr3 = Math.abs(low - prevClose);
+            
+            trueRanges.push(Math.max(tr1, tr2, tr3));
+        }
+        
+        // Simple moving average of true ranges
+        const atr = trueRanges.slice(-period).reduce((sum, tr) => sum + tr, 0) / period;
+        return atr;
     }
 
     async runAnalysis() {
@@ -605,7 +727,11 @@ class BinancePredictiveBot {
             else if (signals.compositeSignal.includes('over')) signalDisplay = color.yellow(signalDisplay);
             else signalDisplay = color.blue(signalDisplay);
 
-            console.log(`${color.cyan(symbol.padEnd(8))} $ ${currentPrice.toFixed(symbol === 'BTCUSDT' ? 2 : this.getPrecisionDigits(currentPrice))} | ${signalDisplay}`);
+            // Add signal score to display
+            const scoreInfo = signals.signalScore ? 
+                ` (L:${signals.signalScore.long}/10 S:${signals.signalScore.short}/10)` : '';
+
+            console.log(`${color.cyan(symbol.padEnd(8))} $ ${currentPrice.toFixed(symbol === 'BTCUSDT' ? 2 : this.getPrecisionDigits(currentPrice))} | ${signalDisplay}${scoreInfo}`);
 
             // Display indicators
             let indicatorsLine = [];

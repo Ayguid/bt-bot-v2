@@ -15,33 +15,33 @@ class CandleAnalyzer {
         };
     }
 
-buildConfig(riskManagementConfig) {
-    // Use main bot config if provided - this should always be the case
-    if (riskManagementConfig) {
-        return {
-            emaPeriods: { 
-                fast: riskManagementConfig.emaShortPeriod,
-                medium: riskManagementConfig.emaMediumPeriod,
-                slow: riskManagementConfig.emaLongPeriod
-            },
-            rsiPeriod: riskManagementConfig.rsiPeriod,
-            bbands: {
-                period: riskManagementConfig.bbandsPeriod,
-                stdDev: riskManagementConfig.bbandsStdDev
-            },
-            volumeEmaPeriod: riskManagementConfig.volumeEmaPeriod,
-            volumeSpikeMultiplier: riskManagementConfig.volumeSpikeThreshold,
-            volumeAverageMultiplier: riskManagementConfig.volumeAverageMultiplier,
-            volumeLookbackPeriod: riskManagementConfig.volumeLookbackPeriod,
-            buyingPressureLookback: riskManagementConfig.buyingPressureLookback,
-            buyingPressureThreshold: riskManagementConfig.buyingPressureThreshold,
-            minCandlesForAnalysis: riskManagementConfig.minCandlesForAnalysis
-        };
-    }
+    buildConfig(riskManagementConfig) {
+        // Use main bot config if provided - this should always be the case
+        if (riskManagementConfig) {
+            return {
+                emaPeriods: { 
+                    fast: riskManagementConfig.emaShortPeriod,
+                    medium: riskManagementConfig.emaMediumPeriod,
+                    slow: riskManagementConfig.emaLongPeriod
+                },
+                rsiPeriod: riskManagementConfig.rsiPeriod,
+                bbands: {
+                    period: riskManagementConfig.bbandsPeriod,
+                    stdDev: riskManagementConfig.bbandsStdDev
+                },
+                volumeEmaPeriod: riskManagementConfig.volumeEmaPeriod,
+                volumeSpikeMultiplier: riskManagementConfig.volumeSpikeThreshold,
+                volumeAverageMultiplier: riskManagementConfig.volumeAverageMultiplier,
+                volumeLookbackPeriod: riskManagementConfig.volumeLookbackPeriod,
+                buyingPressureLookback: riskManagementConfig.buyingPressureLookback,
+                buyingPressureThreshold: riskManagementConfig.buyingPressureThreshold,
+                minCandlesForAnalysis: riskManagementConfig.minCandlesForAnalysis
+            };
+        }
 
-    // If no config provided, throw error instead of using inconsistent defaults
-    throw new Error('CandleAnalyzer requires riskManagementConfig from main bot');
-}
+        // If no config provided, throw error instead of using inconsistent defaults
+        throw new Error('CandleAnalyzer requires riskManagementConfig from main bot');
+    }
 
     _getCandleProp(candle, prop) {
         return candle[this.CANDLE_INDEX[prop.toUpperCase()]];
@@ -80,17 +80,20 @@ buildConfig(riskManagementConfig) {
         return this.calculateEMA(candles, this.config.volumeEmaPeriod, 'volume');
     }
 
+    // UPDATED: More strict buying pressure detection
     hasBuyingPressure(candles, lookback = this.config.buyingPressureLookback) {
         if (!candles || candles.length < lookback) return false;
         
         const recent = candles.slice(-lookback);
         
-        // Count bullish candles (close > open)
-        const bullishCount = recent.filter(c => 
-            this._getCandleProp(c, 'close') > this._getCandleProp(c, 'open')
-        ).length;
+        // Count STRONG bullish candles (close > open by at least 0.1%)
+        const strongBullishCount = recent.filter(c => {
+            const open = this._getCandleProp(c, 'open');
+            const close = this._getCandleProp(c, 'close');
+            return close > open && ((close - open) / open) > 0.001;
+        }).length;
         
-        // Calculate bullish volume ratio
+        // Calculate bullish volume ratio with higher threshold
         const totalVolume = recent.reduce((sum, c) => sum + this._getCandleProp(c, 'volume'), 0);
         const bullishVolume = recent.reduce((sum, c) => {
             const isBullish = this._getCandleProp(c, 'close') > this._getCandleProp(c, 'open');
@@ -99,26 +102,28 @@ buildConfig(riskManagementConfig) {
         
         const bullishVolumeRatio = totalVolume > 0 ? bullishVolume / totalVolume : 0;
         
-        // More strict conditions for buying pressure
-        const minBullishCandles = Math.ceil(lookback * this.config.buyingPressureThreshold);
-        const hasEnoughBullishCandles = bullishCount >= minBullishCandles;
-        const hasStrongVolumeSupport = bullishVolumeRatio > 0.6;
+        // MORE STRICT conditions
+        const minBullishCandles = Math.ceil(lookback * 0.8); // 80% must be bullish
+        const hasEnoughBullishCandles = strongBullishCount >= minBullishCandles;
+        const hasStrongVolumeSupport = bullishVolumeRatio > 0.7; // 70% volume must be bullish
         
-        // Both conditions must be met
         return hasEnoughBullishCandles && hasStrongVolumeSupport;
     }
 
+    // UPDATED: More strict selling pressure detection
     hasSellingPressure(candles, lookback = this.config.buyingPressureLookback) {
         if (!candles || candles.length < lookback) return false;
         
         const recent = candles.slice(-lookback);
         
-        // Count bearish candles (close < open)
-        const bearishCount = recent.filter(c => 
-            this._getCandleProp(c, 'close') < this._getCandleProp(c, 'open')
-        ).length;
+        // Count STRONG bearish candles (close < open by at least 0.1%)
+        const strongBearishCount = recent.filter(c => {
+            const open = this._getCandleProp(c, 'open');
+            const close = this._getCandleProp(c, 'close');
+            return close < open && ((open - close) / open) > 0.001;
+        }).length;
         
-        // Calculate bearish volume ratio
+        // Calculate bearish volume ratio with higher threshold
         const totalVolume = recent.reduce((sum, c) => sum + this._getCandleProp(c, 'volume'), 0);
         const bearishVolume = recent.reduce((sum, c) => {
             const isBearish = this._getCandleProp(c, 'close') < this._getCandleProp(c, 'open');
@@ -127,12 +132,11 @@ buildConfig(riskManagementConfig) {
         
         const bearishVolumeRatio = totalVolume > 0 ? bearishVolume / totalVolume : 0;
         
-        // More strict conditions for selling pressure
-        const minBearishCandles = Math.ceil(lookback * this.config.buyingPressureThreshold);
-        const hasEnoughBearishCandles = bearishCount >= minBearishCandles;
-        const hasStrongVolumeSupport = bearishVolumeRatio > 0.6;
+        // MORE STRICT conditions
+        const minBearishCandles = Math.ceil(lookback * 0.8); // 80% must be bearish
+        const hasEnoughBearishCandles = strongBearishCount >= minBearishCandles;
+        const hasStrongVolumeSupport = bearishVolumeRatio > 0.7; // 70% volume must be bearish
         
-        // Both conditions must be met
         return hasEnoughBearishCandles && hasStrongVolumeSupport;
     }
 

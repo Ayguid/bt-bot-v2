@@ -1,8 +1,9 @@
 const TelegramBot = require('node-telegram-bot-api');
 
 class TelegramBotHandler {
-    constructor(config) {
+    constructor(config, handleCommandCallback) {
         this.config = config;
+        this.handleCommandCallback = handleCommandCallback;
         this.lastAlertTimes = {};
         if (config.telegramBotEnabled) {
             this.bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
@@ -15,11 +16,23 @@ class TelegramBotHandler {
     initialize() {
         if (!this.config.telegramBotEnabled) return;
         this.bot.on("polling_error", console.error);
+        /*
         this.bot.on('message', msg => {
             if (msg.from.id !== Number(process.env.TELEGRAM_MY_ID)) return;
             this.bot.sendMessage(msg.chat.id, `Received: ${msg.text}`);
-        });
+        });*/
+        this.bot.on('message', this.handleTelegramMessage.bind(this));
         console.log('Telegram bot initialized and polling started.');
+    }
+
+        
+    async handleTelegramMessage(msg) {
+        //console.log('Received Telegram message:', msg);
+        if (msg.from.id !== Number(process.env.TELEGRAM_MY_ID)) return; //admin msg
+        await this.bot.sendMessage(process.env.TELEGRAM_MY_ID, `Received your message '${msg.text}'`);
+        const [command, ...args] = msg.text.split(' ');
+        const response = await this.handleCommandCallback(command, args);
+        await this.bot.sendMessage(process.env.TELEGRAM_MY_ID, response);
     }
 
     sendAlert(alertData) {
