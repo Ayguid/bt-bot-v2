@@ -5,6 +5,7 @@ class TelegramBotHandler {
         this.config = config;
         this.handleCommandCallback = handleCommandCallback;
         this.lastAlertTimes = {};
+        this.processedMessages = new Set();
         if (config.telegramBotEnabled) {
             this.bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
                 polling: true,
@@ -16,29 +17,59 @@ class TelegramBotHandler {
     initialize() {
         if (!this.config.telegramBotEnabled) return;
         this.bot.on("polling_error", console.error);
-        /*
-        this.bot.on('message', msg => {
-            if (msg.from.id !== Number(process.env.TELEGRAM_MY_ID)) return;
-            this.bot.sendMessage(msg.chat.id, `Received: ${msg.text}`);
-        });*/
+        
         this.bot.on('message', this.handleTelegramMessage.bind(this));
         console.log('Telegram bot initialized and polling started.');
     }
 
-        
     async handleTelegramMessage(msg) {
-        //console.log('Received Telegram message:', msg);
+        // Duplicate message prevention
+        const messageId = `${msg.message_id}_${msg.chat.id}`;
+        if (this.processedMessages.has(messageId)) {
+            console.log(`⚠️ Ignoring duplicate message: ${msg.text}`);
+            return;
+        }
+        
+        this.processedMessages.add(messageId);
+        
+        // Clean up old message IDs to prevent memory leaks
+        if (this.processedMessages.size > 1000) {
+            const firstMessage = Array.from(this.processedMessages)[0];
+            this.processedMessages.delete(firstMessage);
+        }
+
+        console.log('Received Telegram message:', msg.text);
         if (msg.from.id !== Number(process.env.TELEGRAM_MY_ID)) return; //admin msg
-        await this.bot.sendMessage(process.env.TELEGRAM_MY_ID, `Received your message '${msg.text}'`);
-        const [command, ...args] = msg.text.split(' ');
-        const response = await this.handleCommandCallback(command, args);
-        await this.bot.sendMessage(process.env.TELEGRAM_MY_ID, response);
+        
+        // Check if message is a command (starts with /)
+        if (msg.text.startsWith('/')) {
+            // Handle command
+            const [fullCommand, ...args] = msg.text.split(' ');
+            const command = fullCommand.substring(1); // Remove the '/' prefix
+            console.log(`Processing command: /${command} with args:`, args);
+            
+            const response = await this.handleCommandCallback(command, args);
+            await this.bot.sendMessage(process.env.TELEGRAM_MY_ID, response);
+        } else {
+            // Handle regular messages (non-commands)
+            await this.bot.sendMessage(process.env.TELEGRAM_MY_ID, `Received your message: '${msg.text}'`);
+        }
+    }
+
+    // ... rest of your methods remain exactly the same
+    sendNotification(message) {
+        if (!this.config.telegramBotEnabled) return;
+        
+        try {
+            this.bot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, `📢 ${message}`);
+        } catch (error) {
+            console.error('Failed to send notification:', error);
+        }
     }
 
     sendAlert(alertData) {
         if (!this.config.telegramBotEnabled) return;
 
-        // Destructure the alert data with default values
         const {
             pair,
             signal,
@@ -54,7 +85,6 @@ class TelegramBotHandler {
         const lastAlert = this.lastAlertTimes[pair] || 0;
         if (now - lastAlert < this.config.alertCooldown) return;
 
-        // Calculate risk-reward metrics
         const riskPct = Math.abs((entryPrice - stopLoss) / entryPrice * 100);
         const rewardPct = Math.abs((takeProfit - entryPrice) / entryPrice * 100);
         const rrRatio = (rewardPct / riskPct).toFixed(2);
@@ -70,7 +100,6 @@ ${action} SIGNAL
 🎯 Entry: $${entryPrice.toFixed(pricePrecision)}
         `.trim();
 
-        // Add optimal buy price if available and different from entry
         if (optimalBuy && optimalBuy !== entryPrice) {
             const discount = ((currentPrice - optimalBuy) / currentPrice * 100).toFixed(2);
             message += `\n⭐ Optimal: $${optimalBuy.toFixed(pricePrecision)} (${discount}% below current) \n`;
