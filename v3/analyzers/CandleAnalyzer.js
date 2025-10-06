@@ -31,7 +31,7 @@ class CandleAnalyzer {
                     stdDev: riskManagementConfig.bbandsStdDev
                 },
                 volumeEmaPeriod: riskManagementConfig.volumeEmaPeriod,
-                volumeSpikeMultiplier: riskManagementConfig.volumeSpikeThreshold,
+                volumeSpikeMultiplier: riskManagementConfig.volumeSpikeMultiplier,
                 volumeAverageMultiplier: riskManagementConfig.volumeAverageMultiplier,
                 volumeLookbackPeriod: riskManagementConfig.volumeLookbackPeriod,
                 buyingPressureLookback: riskManagementConfig.buyingPressureLookback,

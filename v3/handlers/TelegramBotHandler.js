@@ -56,17 +56,6 @@ class TelegramBotHandler {
         }
     }
 
-    // ... rest of your methods remain exactly the same
-    sendNotification(message) {
-        if (!this.config.telegramBotEnabled) return;
-        
-        try {
-            this.bot.sendMessage(process.env.TELEGRAM_GROUPCHAT_ID, `📢 ${message}`);
-        } catch (error) {
-            console.error('Failed to send notification:', error);
-        }
-    }
-
     sendAlert(alertData) {
         if (!this.config.telegramBotEnabled) return;
 

@@ -9,6 +9,7 @@ const { wait } = require('../utils/helpers');
 
 class BinancePredictiveBot {
     constructor() {
+        this.DEBUG = process.env.DEBUG === 'true'; // Enable debug logs via environment variable
         this.timeframe = process.env.TIMEFRAME || '1h';
         this.config = this.buildConfig();
         this.logFormatter = new LogFormatter();
@@ -136,7 +137,7 @@ class BinancePredictiveBot {
             analysisInterval: timeframeConfig.analysisInterval,
             maxCandles: timeframeConfig.maxCandles,
             telegramBotEnabled: true,
-            alertCooldown: 3600000,
+            alertCooldown: 900000, //15min
             alertSignals: ['long', 'short'],
             riskManagement: adaptiveRiskManagement,
             reconnectInterval: 5000,
@@ -159,7 +160,7 @@ class BinancePredictiveBot {
             emaLongPeriod: Math.max(20, Math.round(baseRiskManagement.baseEmaLongPeriod * emaMultiplier)),
             // Adjust analysis intervals and thresholds
             minCandlesRequired: Math.max(20, Math.round(20 * (60 / multiplier))),
-            volumeSpikeThreshold: this.getAdaptiveVolumeThreshold(multiplier),
+            volumeSpikeMultiplier: this.getAdaptiveVolumeThreshold(multiplier),
             volumeAverageMultiplier: this.getAdaptiveVolumeAverageThreshold(multiplier)
         };
     }
@@ -293,9 +294,6 @@ class BinancePredictiveBot {
             // Calculate signal score first
             const signalScore = this.calculateSignalScore(candleAnalysis, obAnalysis.signals, candles, symbol);
 
-            // Log signal details for debugging
-            this.logSignalDetails(symbol, signalScore, candleAnalysis, obAnalysis.signals);
-
             const compositeSignal = this.determineCompositeSignal(candleAnalysis, obAnalysis.signals, candles, symbol, signalScore);
             const suggestedPrices = this.calculateSuggestedPrices(orderBook, candles, compositeSignal, candleAnalysis, symbol);
 
@@ -345,9 +343,10 @@ class BinancePredictiveBot {
         if (candleSignals.error) return 'neutral';
 
         // Check cooldown first
+        /*
         if (this.isInCooldown(symbol)) {
             return 'neutral';
-        }
+        }*/
 
         // Use scoring system instead of binary conditions
         const score = signalScore || this.calculateSignalScore(candleSignals, obSignals, candles, symbol);
@@ -369,137 +368,83 @@ class BinancePredictiveBot {
     }
 
     // ADDED: Scoring system for signal quality
-calculateSignalScore(candleSignals, obSignals, candles, symbol) {
-    let longScore = 0;
-    let shortScore = 0;
+    calculateSignalScore(candleSignals, obSignals, candles, symbol) {
+        let longScore = 0;
+        let shortScore = 0;
 
-    const isUptrend = candleSignals.emaFast > candleSignals.emaMedium &&
-        candleSignals.emaMedium > candleSignals.emaSlow;
+        const isUptrend = candleSignals.emaFast > candleSignals.emaMedium &&
+            candleSignals.emaMedium > candleSignals.emaSlow;
 
-    const isDowntrend = candleSignals.emaFast < candleSignals.emaMedium &&
-        candleSignals.emaMedium < candleSignals.emaSlow;
+        const isDowntrend = candleSignals.emaFast < candleSignals.emaMedium &&
+            candleSignals.emaMedium < candleSignals.emaSlow;
 
-    const lastCandle = candles[candles.length - 1];
-    const lastVolume = this.analyzers.candle._getCandleProp(lastCandle, 'volume');
-    const isHighVolume = candleSignals.volumeSpike ||
-        lastVolume > candleSignals.volumeEMA * this.config.riskManagement.volumeAverageMultiplier;
-
-    const { useBollingerBands } = this.config.riskManagement;
-
-    // === LONG SIGNAL SCORING ===
-
-    // Core trend signals (HIGH WEIGHT)
-    if (candleSignals.emaBullishCross) longScore += 3;
-    if (candleSignals.buyingPressure) longScore += 2;
-    if (isUptrend) longScore += 2;
-
-    // Bollinger Band signals (MEDIUM WEIGHT)
-    if (useBollingerBands) {
-        if (candleSignals.nearLowerBand) longScore += 2; // Oversold bounce potential
-        if (candleSignals.bbandsSqueeze) longScore += 1; // Impending breakout
-    }
-
-    // Confirmation signals (MEDIUM WEIGHT)
-    if (!candleSignals.isOverbought) longScore += 1;
-    if (isHighVolume) longScore += 1;
-    if (candleSignals.rsi > 40 && candleSignals.rsi < 60) longScore += 1;
-
-    // Additional bullish conditions (LOW WEIGHT)
-    if (obSignals.strongBidImbalance) longScore += 1;
-    if (obSignals.supportDetected) longScore += 1;
-    if (obSignals.pricePressure === 'up' || obSignals.pricePressure === 'strong_up') longScore += 1;
-
-    // === SHORT SIGNAL SCORING ===
-
-    // Core trend signals (HIGH WEIGHT)
-    if (candleSignals.emaBearishCross) shortScore += 3;
-    if (candleSignals.sellingPressure) shortScore += 2;
-    if (isDowntrend) shortScore += 2;
-
-    // Bollinger Band signals (MEDIUM WEIGHT)
-    if (useBollingerBands) {
-        if (candleSignals.nearUpperBand) shortScore += 2; // Overbought rejection potential
-        if (candleSignals.bbandsSqueeze) shortScore += 1; // Impending breakdown
-    }
-
-    // Confirmation signals (MEDIUM WEIGHT)
-    if (candleSignals.isOverbought) shortScore += 1;
-    if (isHighVolume) shortScore += 1;
-    if (candleSignals.rsi > 60 && candleSignals.rsi < 80) shortScore += 1;
-
-    // Additional bearish conditions (LOW WEIGHT)
-    if (obSignals.strongAskImbalance) shortScore += 1;
-    if (obSignals.resistanceDetected) shortScore += 1;
-    if (obSignals.pricePressure === 'down' || obSignals.pricePressure === 'strong_down') shortScore += 1;
-
-    // === VOLUME BOOST (applies to both) ===
-    if (isHighVolume) {
-        longScore += 1;
-        shortScore += 1;
-    }
-
-    // === TREND ALIGNMENT BONUS ===
-    if (isUptrend) longScore += 1;
-    if (isDowntrend) shortScore += 1;
-
-    return { long: Math.min(longScore, 10), short: Math.min(shortScore, 10) };
-}
-
-    // ADDED: Signal details logging
-logSignalDetails(symbol, signalScore, candleSignals, obSignals) {
-    if (signalScore.long >= 6 || signalScore.short >= 6) {
-        console.log(`\n📊 ${symbol} Signal Analysis:`);
-        console.log(`   Long Score: ${signalScore.long}/10, Short Score: ${signalScore.short}/10`);
-        
-        // Show Bollinger Band status
-        if (this.config.riskManagement.useBollingerBands) {
-            console.log(`   Bollinger Bands: ${candleSignals.nearLowerBand ? 'Near Lower' : candleSignals.nearUpperBand ? 'Near Upper' : 'Mid-Range'}`);
-            if (candleSignals.bbandsSqueeze) console.log(`   - Bollinger Squeeze Detected`);
-        }
-
-        if (signalScore.long >= 6) {
-            console.log(`   🟢 LONG Conditions:`);
-            if (candleSignals.emaBullishCross) console.log(`     - EMA Bullish Cross`);
-            if (candleSignals.buyingPressure) console.log(`     - Buying Pressure`);
-            if (obSignals.strongBidImbalance) console.log(`     - Bid Imbalance`);
-            if (candleSignals.volumeSpike) console.log(`     - Volume Spike`);
-            if (candleSignals.nearLowerBand) console.log(`     - Near Lower Bollinger Band`);
-        }
-
-        if (signalScore.short >= 6) {
-            console.log(`   🔴 SHORT Conditions:`);
-            if (candleSignals.emaBearishCross) console.log(`     - EMA Bearish Cross`);
-            if (candleSignals.sellingPressure) console.log(`     - Selling Pressure`);
-            if (obSignals.strongAskImbalance) console.log(`     - Ask Imbalance`);
-            if (candleSignals.volumeSpike) console.log(`     - Volume Spike`);
-            if (candleSignals.nearUpperBand) console.log(`     - Near Upper Bollinger Band`);
-        }
-    }
-}
-
-    // ADDED: Signal validation helper methods
-    /*
-    isValidSignalConditions(candleSignals, candles, symbol) {
-        const pairConfig = this.pairConfigs[symbol];
         const lastCandle = candles[candles.length - 1];
-        const volume = this.analyzers.candle._getCandleProp(lastCandle, 'volume');
+        const lastVolume = this.analyzers.candle._getCandleProp(lastCandle, 'volume');
+        const isHighVolume = candleSignals.volumeSpike ||
+            lastVolume > candleSignals.volumeEMA * this.config.riskManagement.volumeAverageMultiplier;
 
-        // Minimum volume filter
-        if (volume < pairConfig.minVolume) return false;
+        const { useBollingerBands } = this.config.riskManagement;
 
-        // RSI filter - avoid extreme zones
-        if (candleSignals.rsi > 75 || candleSignals.rsi < 25) return false;
+        // === LONG SIGNAL SCORING ===
 
-        // Time filter - avoid low activity periods
-        const utcHour = new Date().getUTCHours();
-        if (utcHour >= 0 && utcHour <= 4) return false; // Asian session
+        // Core trend signals (HIGH WEIGHT)
+        if (candleSignals.emaBullishCross) longScore += 3;
+        if (candleSignals.buyingPressure) longScore += 2;
+        if (isUptrend) longScore += 2;
 
-        // Trend strength filter
-        const trendStrength = Math.abs(candleSignals.emaFast - candleSignals.emaMedium) / candleSignals.emaMedium;
-        if (trendStrength < 0.002) return false; // Minimum 0.2% trend strength
+        // Bollinger Band signals (MEDIUM WEIGHT)
+        if (useBollingerBands) {
+            if (candleSignals.nearLowerBand) longScore += 2; // Oversold bounce potential
+            if (candleSignals.bbandsSqueeze) longScore += 1; // Impending breakout
+        }
 
-        return true;
-    }*/
+        // Confirmation signals (MEDIUM WEIGHT)
+        if (!candleSignals.isOverbought) longScore += 1;
+        if (isHighVolume) longScore += 1;
+        if (candleSignals.rsi > 40 && candleSignals.rsi < 60) longScore += 1;
+
+        // Additional bullish conditions (LOW WEIGHT)
+        if (obSignals.strongBidImbalance) longScore += 1;
+        if (obSignals.supportDetected) longScore += 1;
+        if (obSignals.pricePressure === 'up' || obSignals.pricePressure === 'strong_up') longScore += 1;
+
+        // === SHORT SIGNAL SCORING ===
+
+        // Core trend signals (HIGH WEIGHT)
+        if (candleSignals.emaBearishCross) shortScore += 3;
+        if (candleSignals.sellingPressure) shortScore += 2;
+        if (isDowntrend) shortScore += 2;
+
+        // Bollinger Band signals (MEDIUM WEIGHT)
+        if (useBollingerBands) {
+            if (candleSignals.nearUpperBand) shortScore += 2; // Overbought rejection potential
+            if (candleSignals.bbandsSqueeze) shortScore += 1; // Impending breakdown
+        }
+
+        // Confirmation signals (MEDIUM WEIGHT)
+        if (candleSignals.isOverbought) shortScore += 1;
+        if (isHighVolume) shortScore += 1;
+        if (candleSignals.rsi > 60 && candleSignals.rsi < 80) shortScore += 1;
+
+        // Additional bearish conditions (LOW WEIGHT)
+        if (obSignals.strongAskImbalance) shortScore += 1;
+        if (obSignals.resistanceDetected) shortScore += 1;
+        if (obSignals.pricePressure === 'down' || obSignals.pricePressure === 'strong_down') shortScore += 1;
+
+        // === VOLUME BOOST (applies to both) ===
+        if (isHighVolume) {
+            longScore += 1;
+            shortScore += 1;
+        }
+
+        // === TREND ALIGNMENT BONUS ===
+        if (isUptrend) longScore += 1;
+        if (isDowntrend) shortScore += 1;
+
+        
+        return { long: Math.min(longScore, 10), short: Math.min(shortScore, 10) };
+    }
+
 
     isInCooldown(symbol) {
         const cooldown = this.pairConfigs[symbol]?.cooldown || 120; // minutes
@@ -599,99 +544,99 @@ logSignalDetails(symbol, signalScore, candleSignals, obSignals) {
     }
 
     // UPDATED: Dynamic stop loss calculation with ATR
-calculateSuggestedPrices(orderBook, candles, signal, candleAnalysis, symbol) {
-    const currentPrice = candles[candles.length - 1][4];
-    const bestBid = orderBook.bids[0]?.[0] || currentPrice;
-    const bestAsk = orderBook.asks[0]?.[0] || currentPrice;
-    const bb = candleAnalysis.bollingerBands;
+    calculateSuggestedPrices(orderBook, candles, signal, candleAnalysis, symbol) {
+        const currentPrice = candles[candles.length - 1][4];
+        const bestBid = orderBook.bids[0]?.[0] || currentPrice;
+        const bestAsk = orderBook.asks[0]?.[0] || currentPrice;
+        const bb = candleAnalysis.bollingerBands;
 
-    const pairConfig = this.pairConfigs[symbol];
-    const atr = this.calculateATR(candles, 14);
-    const volatility = atr / currentPrice;
+        const pairConfig = this.pairConfigs[symbol];
+        const atr = this.calculateATR(candles, 14);
+        const volatility = atr / currentPrice;
 
-    // Dynamic stop loss based on volatility
-    const baseStopPercent = 0.02; // 2%
-    const volatilityAdjustedStop = baseStopPercent * pairConfig.volatilityMultiplier * (1 + volatility * 10);
-    const dynamicStopPercent = Math.min(Math.max(volatilityAdjustedStop, 0.015), 0.05); // 1.5% to 5%
+        // Dynamic stop loss based on volatility
+        const baseStopPercent = 0.02; // 2%
+        const volatilityAdjustedStop = baseStopPercent * pairConfig.volatilityMultiplier * (1 + volatility * 10);
+        const dynamicStopPercent = Math.min(Math.max(volatilityAdjustedStop, 0.015), 0.05); // 1.5% to 5%
 
-    const {
-        riskRewardRatio,
-        useBollingerBands,
-        longEntryDiscount,
-        shortEntryPremium,
-        bollingerBandAdjustment
-    } = this.config.riskManagement;
+        const {
+            riskRewardRatio,
+            useBollingerBands,
+            longEntryDiscount,
+            shortEntryPremium,
+            bollingerBandAdjustment
+        } = this.config.riskManagement;
 
-    const optimalBuy = signal === 'long' ?
-        this.calculateOptimalBuyPrice(candles, orderBook, signal) :
-        null;
+        const optimalBuy = signal === 'long' ?
+            this.calculateOptimalBuyPrice(candles, orderBook, signal) :
+            null;
 
-    if (signal === 'long') {
-        let entryPrice = bestAsk * (1 - longEntryDiscount);
+        if (signal === 'long') {
+            let entryPrice = bestAsk * (1 - longEntryDiscount);
 
-        // Apply Bollinger Band adjustment if enabled
-        if (useBollingerBands && bb && candleAnalysis.nearLowerBand) {
-            entryPrice *= (1 - bollingerBandAdjustment);
-            console.log(`📊 ${symbol}: Applied Bollinger Band adjustment for long entry`);
+            // Apply Bollinger Band adjustment if enabled
+            if (useBollingerBands && bb && candleAnalysis.nearLowerBand) {
+                entryPrice *= (1 - bollingerBandAdjustment);
+                console.log(`📊 ${symbol}: Applied Bollinger Band adjustment for long entry`);
+            }
+
+            // Use ATR-based stop loss instead of fixed percentage
+            const atrStopPrice = currentPrice - (atr * 1.5);
+            const percentageStopPrice = entryPrice * (1 - dynamicStopPercent);
+
+            // Use Bollinger Band lower as stop if it provides better protection
+            let stopLossPrice = Math.max(atrStopPrice, percentageStopPrice);
+            if (useBollingerBands && bb && bb.lower) {
+                stopLossPrice = Math.max(stopLossPrice, bb.lower * (1 - 0.001)); // Slightly below lower band
+            }
+
+            const riskAmount = entryPrice - stopLossPrice;
+            const takeProfitPrice = entryPrice + (riskAmount * riskRewardRatio);
+
+            return {
+                entry: entryPrice,
+                optimalBuy: optimalBuy,
+                stopLoss: stopLossPrice,
+                takeProfit: takeProfitPrice
+            };
         }
 
-        // Use ATR-based stop loss instead of fixed percentage
-        const atrStopPrice = currentPrice - (atr * 1.5);
-        const percentageStopPrice = entryPrice * (1 - dynamicStopPercent);
-        
-        // Use Bollinger Band lower as stop if it provides better protection
-        let stopLossPrice = Math.max(atrStopPrice, percentageStopPrice);
-        if (useBollingerBands && bb && bb.lower) {
-            stopLossPrice = Math.max(stopLossPrice, bb.lower * (1 - 0.001)); // Slightly below lower band
-        }
+        if (signal === 'short') {
+            let entryPrice = bestBid * (1 + shortEntryPremium);
 
-        const riskAmount = entryPrice - stopLossPrice;
-        const takeProfitPrice = entryPrice + (riskAmount * riskRewardRatio);
+            // Apply Bollinger Band adjustment if enabled
+            if (useBollingerBands && bb && candleAnalysis.nearUpperBand) {
+                entryPrice *= (1 + bollingerBandAdjustment);
+                console.log(`📊 ${symbol}: Applied Bollinger Band adjustment for short entry`);
+            }
+
+            const atrStopPrice = currentPrice + (atr * 1.5);
+            const percentageStopPrice = entryPrice * (1 + dynamicStopPercent);
+
+            // Use Bollinger Band upper as stop if it provides better protection
+            let stopLossPrice = Math.min(atrStopPrice, percentageStopPrice);
+            if (useBollingerBands && bb && bb.upper) {
+                stopLossPrice = Math.min(stopLossPrice, bb.upper * (1 + 0.001)); // Slightly above upper band
+            }
+
+            const riskAmount = stopLossPrice - entryPrice;
+            const takeProfitPrice = entryPrice - (riskAmount * riskRewardRatio);
+
+            return {
+                entry: entryPrice,
+                optimalBuy: null,
+                stopLoss: stopLossPrice,
+                takeProfit: takeProfitPrice
+            };
+        }
 
         return {
-            entry: entryPrice,
-            optimalBuy: optimalBuy,
-            stopLoss: stopLossPrice,
-            takeProfit: takeProfitPrice
-        };
-    }
-
-    if (signal === 'short') {
-        let entryPrice = bestBid * (1 + shortEntryPremium);
-
-        // Apply Bollinger Band adjustment if enabled
-        if (useBollingerBands && bb && candleAnalysis.nearUpperBand) {
-            entryPrice *= (1 + bollingerBandAdjustment);
-            console.log(`📊 ${symbol}: Applied Bollinger Band adjustment for short entry`);
-        }
-
-        const atrStopPrice = currentPrice + (atr * 1.5);
-        const percentageStopPrice = entryPrice * (1 + dynamicStopPercent);
-        
-        // Use Bollinger Band upper as stop if it provides better protection
-        let stopLossPrice = Math.min(atrStopPrice, percentageStopPrice);
-        if (useBollingerBands && bb && bb.upper) {
-            stopLossPrice = Math.min(stopLossPrice, bb.upper * (1 + 0.001)); // Slightly above upper band
-        }
-
-        const riskAmount = stopLossPrice - entryPrice;
-        const takeProfitPrice = entryPrice - (riskAmount * riskRewardRatio);
-
-        return {
-            entry: entryPrice,
+            entry: null,
             optimalBuy: null,
-            stopLoss: stopLossPrice,
-            takeProfit: takeProfitPrice
+            stopLoss: null,
+            takeProfit: null
         };
     }
-
-    return {
-        entry: null,
-        optimalBuy: null,
-        stopLoss: null,
-        takeProfit: null
-    };
-}
 
     // ADDED: ATR calculation method
     calculateATR(candles, period = 14) {
