@@ -2,3 +2,5 @@
 node_modules 
 /db
 /logs
+
+/v3/reports

@@ -35,6 +35,8 @@ class BinancePredictiveBot {
         // ADDED: Uptime tracking
         this.startTime = Date.now();
         this.bootManager = new BootManager(this);
+        //
+        this.signalLogger = new (require('./backtest/SignalLogger'))(this);
     }
 
 
@@ -71,7 +73,7 @@ class BinancePredictiveBot {
                 emaMultiplier: 1.0
             },
             '1h': {
-                analysisInterval: 60000, // 1 minute
+                analysisInterval: 1000,//60000, // 1 minute
                 maxCandles: 168,
                 lookbackMultiplier: 60,
                 emaMultiplier: 1.0
@@ -338,27 +340,91 @@ class BinancePredictiveBot {
         }
     }
 
-    // UPDATED: Signal determination with scoring system
+    // UPDATED: More strict signal determination with divergence checks
     determineCompositeSignal(candleSignals, obSignals, candles, symbol, signalScore) {
         if (candleSignals.error) return 'neutral';
 
-        // Check cooldown first
-        /*
-        if (this.isInCooldown(symbol)) {
-            return 'neutral';
-        }*/
+        // Detect divergence first
+        const divergence = this.detectDivergence(candleSignals, obSignals);
 
-        // Use scoring system instead of binary conditions
+        // Use scoring system
         const score = signalScore || this.calculateSignalScore(candleSignals, obSignals, candles, symbol);
 
-        // Only trigger on high-confidence signals (8/10 score)
+        // LONG SIGNAL VALIDATION
         if (score.long >= 8) {
+            // CRITICAL: Reject if bearish divergence detected
+            if (divergence.bearishDivergence) {
+                console.log(`🚫 REJECTED LONG for ${symbol}: Bearish divergence (OB bullish but price weak/bearish)`);
+                return 'neutral';
+            }
+
+            // CRITICAL: Reject if order book shows downtrend without strong candle confirmation
+            if (obSignals.inDowntrend && !candleSignals.buyingPressure && !candleSignals.volumeSpike) {
+                console.log(`🚫 REJECTED LONG for ${symbol}: Order book in downtrend, no buying pressure`);
+                return 'neutral';
+            }
+
+            // CRITICAL: Require at least ONE strong candle signal for high scores
+            const hasStrongCandleSignal =
+                candleSignals.emaBullishCross ||
+                candleSignals.buyingPressure ||
+                candleSignals.volumeSpike;
+
+            if (!hasStrongCandleSignal && score.long < 10) {
+                console.log(`🚫 REJECTED LONG for ${symbol}: No strong candle confirmation (Score: ${score.long}/10)`);
+                return 'neutral';
+            }
+
+            // ADDITIONAL: Check volume alignment
+            const lastCandle = candles[candles.length - 1];
+            const lastVolume = this.analyzers.candle._getCandleProp(lastCandle, 'volume');
+            const isLowVolume = lastVolume < candleSignals.volumeEMA * 0.5;
+
+            if (isLowVolume && !candleSignals.buyingPressure) {
+                console.log(`🚫 REJECTED LONG for ${symbol}: Low volume with no buying pressure`);
+                return 'neutral';
+            }
+
             console.log(`🎯 STRONG LONG (Score: ${score.long}/10) for ${symbol}`);
             this.updateCooldown(symbol);
             return 'long';
         }
 
+        // SHORT SIGNAL VALIDATION
         if (score.short >= 8) {
+            // CRITICAL: Reject if bullish divergence detected
+            if (divergence.bullishDivergence) {
+                console.log(`🚫 REJECTED SHORT for ${symbol}: Bullish divergence (OB bearish but price strong/bullish)`);
+                return 'neutral';
+            }
+
+            // CRITICAL: Reject if order book shows uptrend without strong candle confirmation
+            if (obSignals.inUptrend && !candleSignals.sellingPressure && !candleSignals.volumeSpike) {
+                console.log(`🚫 REJECTED SHORT for ${symbol}: Order book in uptrend, no selling pressure`);
+                return 'neutral';
+            }
+
+            // CRITICAL: Require at least ONE strong candle signal for high scores
+            const hasStrongCandleSignal =
+                candleSignals.emaBearishCross ||
+                candleSignals.sellingPressure ||
+                candleSignals.volumeSpike;
+
+            if (!hasStrongCandleSignal && score.short < 10) {
+                console.log(`🚫 REJECTED SHORT for ${symbol}: No strong candle confirmation (Score: ${score.short}/10)`);
+                return 'neutral';
+            }
+
+            // ADDITIONAL: Check volume alignment
+            const lastCandle = candles[candles.length - 1];
+            const lastVolume = this.analyzers.candle._getCandleProp(lastCandle, 'volume');
+            const isLowVolume = lastVolume < candleSignals.volumeEMA * 0.5;
+
+            if (isLowVolume && !candleSignals.sellingPressure) {
+                console.log(`🚫 REJECTED SHORT for ${symbol}: Low volume with no selling pressure`);
+                return 'neutral';
+            }
+
             console.log(`🎯 STRONG SHORT (Score: ${score.short}/10) for ${symbol}`);
             this.updateCooldown(symbol);
             return 'short';
@@ -367,7 +433,7 @@ class BinancePredictiveBot {
         return 'neutral';
     }
 
-    // ADDED: Scoring system for signal quality
+    // UPDATED: More conservative scoring that requires candle + OB alignment
     calculateSignalScore(candleSignals, obSignals, candles, symbol) {
         let longScore = 0;
         let shortScore = 0;
@@ -387,64 +453,118 @@ class BinancePredictiveBot {
 
         // === LONG SIGNAL SCORING ===
 
-        // Core trend signals (HIGH WEIGHT)
+        // Core trend signals (HIGHEST WEIGHT - REQUIRED)
         if (candleSignals.emaBullishCross) longScore += 3;
-        if (candleSignals.buyingPressure) longScore += 2;
-        if (isUptrend) longScore += 2;
+        if (candleSignals.buyingPressure) longScore += 3; // INCREASED from 2
+        if (isUptrend) longScore += 1;
 
         // Bollinger Band signals (MEDIUM WEIGHT)
         if (useBollingerBands) {
-            if (candleSignals.nearLowerBand) longScore += 2; // Oversold bounce potential
-            if (candleSignals.bbandsSqueeze) longScore += 1; // Impending breakout
+            if (candleSignals.nearLowerBand) longScore += 2;
+            if (candleSignals.bbandsSqueeze) longScore += 1;
         }
 
-        // Confirmation signals (MEDIUM WEIGHT)
+        // RSI confirmation (MEDIUM WEIGHT)
         if (!candleSignals.isOverbought) longScore += 1;
-        if (isHighVolume) longScore += 1;
         if (candleSignals.rsi > 40 && candleSignals.rsi < 60) longScore += 1;
 
-        // Additional bullish conditions (LOW WEIGHT)
-        if (obSignals.strongBidImbalance) longScore += 1;
-        if (obSignals.supportDetected) longScore += 1;
-        if (obSignals.pricePressure === 'up' || obSignals.pricePressure === 'strong_up') longScore += 1;
+        // Volume confirmation (CRITICAL)
+        if (isHighVolume) longScore += 2; // INCREASED from 1
+
+        // Order book signals (LOW WEIGHT - only if not in downtrend)
+        if (!obSignals.inDowntrend) {
+            if (obSignals.strongBidImbalance) longScore += 1;
+            if (obSignals.supportDetected) longScore += 1;
+            if (obSignals.pricePressure === 'up' || obSignals.pricePressure === 'strong_up') longScore += 1;
+        } else {
+            // PENALTY: Reduce score if OB shows downtrend
+            longScore -= 2;
+        }
 
         // === SHORT SIGNAL SCORING ===
 
-        // Core trend signals (HIGH WEIGHT)
+        // Core trend signals (HIGHEST WEIGHT - REQUIRED)
         if (candleSignals.emaBearishCross) shortScore += 3;
-        if (candleSignals.sellingPressure) shortScore += 2;
-        if (isDowntrend) shortScore += 2;
+        if (candleSignals.sellingPressure) shortScore += 3; // INCREASED from 2
+        if (isDowntrend) shortScore += 1;
 
         // Bollinger Band signals (MEDIUM WEIGHT)
         if (useBollingerBands) {
-            if (candleSignals.nearUpperBand) shortScore += 2; // Overbought rejection potential
-            if (candleSignals.bbandsSqueeze) shortScore += 1; // Impending breakdown
+            if (candleSignals.nearUpperBand) shortScore += 2;
+            if (candleSignals.bbandsSqueeze) shortScore += 1;
         }
 
-        // Confirmation signals (MEDIUM WEIGHT)
+        // RSI confirmation (MEDIUM WEIGHT)
         if (candleSignals.isOverbought) shortScore += 1;
-        if (isHighVolume) shortScore += 1;
         if (candleSignals.rsi > 60 && candleSignals.rsi < 80) shortScore += 1;
 
-        // Additional bearish conditions (LOW WEIGHT)
-        if (obSignals.strongAskImbalance) shortScore += 1;
-        if (obSignals.resistanceDetected) shortScore += 1;
-        if (obSignals.pricePressure === 'down' || obSignals.pricePressure === 'strong_down') shortScore += 1;
+        // Volume confirmation (CRITICAL)
+        if (isHighVolume) shortScore += 2; // INCREASED from 1
 
-        // === VOLUME BOOST (applies to both) ===
-        if (isHighVolume) {
-            longScore += 1;
-            shortScore += 1;
+        // Order book signals (LOW WEIGHT - only if not in uptrend)
+        if (!obSignals.inUptrend) {
+            if (obSignals.strongAskImbalance) shortScore += 1;
+            if (obSignals.resistanceDetected) shortScore += 1;
+            if (obSignals.pricePressure === 'down' || obSignals.pricePressure === 'strong_down') shortScore += 1;
+        } else {
+            // PENALTY: Reduce score if OB shows uptrend
+            shortScore -= 2;
         }
 
-        // === TREND ALIGNMENT BONUS ===
-        if (isUptrend) longScore += 1;
-        if (isDowntrend) shortScore += 1;
+        // === ALIGNMENT BONUS (both candles AND order book agree) ===
+        if (isUptrend && obSignals.inUptrend) longScore += 2;
+        if (isDowntrend && obSignals.inDowntrend) shortScore += 2;
 
-        
+        if (this.DEBUG) {
+            console.log(`   📊 SCORING BREAKDOWN:`);
+            console.log(`      Long: ${longScore}/10 | Short: ${shortScore}/10`);
+            console.log(`      Candle Trend: Up=${isUptrend}, Down=${isDowntrend}`);
+            console.log(`      OB Trend: Up=${obSignals.inUptrend}, Down=${obSignals.inDowntrend}`);
+            console.log(`      High Volume: ${isHighVolume}`);
+        }
+
         return { long: Math.min(longScore, 10), short: Math.min(shortScore, 10) };
     }
 
+    // ADDED: Detect divergence between order book and candle signals
+    detectDivergence(candleSignals, obSignals) {
+        // Bearish divergence: Order book bullish but price action bearish/weak
+        const bearishDivergence =
+            (obSignals.strongBidImbalance ||
+                obSignals.compositeSignal === 'strong_buy' ||
+                obSignals.compositeSignal === 'buy') &&
+            (obSignals.inDowntrend ||
+                candleSignals.sellingPressure ||
+                candleSignals.emaBearishCross ||
+                (!candleSignals.buyingPressure && !candleSignals.volumeSpike));
+
+        // Bullish divergence: Order book bearish but price action bullish/weak
+        const bullishDivergence =
+            (obSignals.strongAskImbalance ||
+                obSignals.compositeSignal === 'strong_sell' ||
+                obSignals.compositeSignal === 'sell') &&
+            (obSignals.inUptrend ||
+                candleSignals.buyingPressure ||
+                candleSignals.emaBullishCross ||
+                (!candleSignals.sellingPressure && !candleSignals.volumeSpike));
+
+        // Log divergence detection
+        if (this.DEBUG && (bearishDivergence || bullishDivergence)) {
+            console.log(`   ⚠️ DIVERGENCE DETECTED:`);
+            if (bearishDivergence) {
+                console.log(`      Bearish Divergence: OB bullish but price bearish/weak`);
+                console.log(`      - OB: BidImb=${obSignals.strongBidImbalance}, Composite=${obSignals.compositeSignal}`);
+                console.log(`      - Price: Downtrend=${obSignals.inDowntrend}, SellingPress=${candleSignals.sellingPressure}`);
+            }
+            if (bullishDivergence) {
+                console.log(`      Bullish Divergence: OB bearish but price bullish/weak`);
+                console.log(`      - OB: AskImb=${obSignals.strongAskImbalance}, Composite=${obSignals.compositeSignal}`);
+                console.log(`      - Price: Uptrend=${obSignals.inUptrend}, BuyingPress=${candleSignals.buyingPressure}`);
+            }
+        }
+
+        return { bearishDivergence, bullishDivergence };
+    }
 
     isInCooldown(symbol) {
         const cooldown = this.pairConfigs[symbol]?.cooldown || 120; // minutes
@@ -687,6 +807,32 @@ class BinancePredictiveBot {
         this.isRunning = false;
         await this.exchangeManager.closeAllConnections();
     }
+
+        async analyzeSignalsFromCSV(csvFilePath, symbol = 'BTCUSDT', options = {}) {
+        if (this.isRunning) {
+            throw new Error('Cannot analyze signals while live trading is active');
+        }
+
+        try {
+            console.log('📊 Analyzing signals from CSV...');
+            
+            const results = await this.signalLogger.logSignalsFromCSV({
+                symbol: symbol,
+                csvFilePath: csvFilePath,
+                analysisInterval: options.analysisInterval || 4,
+                minSignalScore: options.minSignalScore || 7,
+                startDate: options.startDate,
+                endDate: options.endDate,
+                outputFile: options.outputFile
+            });
+            
+            return results;
+        } catch (error) {
+            console.error('Signal analysis failed:', error);
+            throw error;
+        }
+    }
+
 }
 
 async function main() {
@@ -733,4 +879,11 @@ async function main() {
     }
 }
 
-main();
+//main();
+// Only run main() if this file is executed directly
+if (require.main === module) {
+    main().catch(console.error);
+}
+
+// ✅ CRITICAL: Export the class so other files can use it
+module.exports = BinancePredictiveBot;

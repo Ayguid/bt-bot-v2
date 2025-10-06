@@ -13,6 +13,7 @@
   "dependencies": {
     "@binance/connector": "^3.6.1",
     "console-table-printer": "^2.12.1",
+    "csv-parser": "^3.2.0",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "node-telegram-bot-api": "^0.66.0",
